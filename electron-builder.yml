@@ -41,6 +41,11 @@ publish:
   provider: github
   owner: novexdb
   repo: novexdb
+  # Auto-publish drafts. Without this, electron-builder uploads every
+  # release as a hidden draft and `/releases/latest` returns 404 until
+  # someone clicks "Publish" in the UI — which breaks the website's
+  # download buttons and the in-app auto-updater (it polls `latest`).
+  releaseType: release
 
 mac:
   category: public.app-category.developer-tools
