@@ -46,7 +46,7 @@ mac:
   category: public.app-category.developer-tools
   target:
     - dmg
-    - zipx
+    - zip
   artifactName: ${productName}-${version}-${arch}.${ext}
   # Code signing (uncomment + supply identity to publish signed builds):
   # identity: 'Developer ID Application: Your Name (TEAMID)'

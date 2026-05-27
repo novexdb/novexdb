@@ -93,7 +93,7 @@ export function Hero(): ReactNode {
           <a href="/features" className="inline-flex items-center gap-1.5 hover:text-content">
             <BookOpen className="h-3.5 w-3.5" /> See what's inside
           </a>
-          <a href="https://github.com/Asif-Saheer-k" className="inline-flex items-center gap-1.5 hover:text-content">
+          <a href="https://github.com/novexdb/novexdb" className="inline-flex items-center gap-1.5 hover:text-content">
             <MessageSquare className="h-3.5 w-3.5" /> Join the community
           </a>
           <span>Postgres · MySQL · SQLite · MSSQL</span>

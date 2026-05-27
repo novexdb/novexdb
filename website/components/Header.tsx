@@ -50,7 +50,7 @@ export function Header(): ReactNode {
           ))}
         </nav>
         <div className="hidden items-center gap-2 md:flex">
-          <Button href="https://github.com/Asif-Saheer-k" variant="ghost" size="sm">
+          <Button href="https://github.com/novexdb/novexdb" variant="ghost" size="sm">
             GitHub
           </Button>
           <Button href="/download" size="sm">

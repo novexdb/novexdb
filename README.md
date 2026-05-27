@@ -88,7 +88,7 @@ Most SQL clients fall into one of two buckets: **fast but ugly** (DBeaver, pgAdm
 
 > ⚠️ **Early access.** v0.1 is rough around some edges. File issues if you find them.
 
-Grab the latest installer for your platform from the [Releases page](https://github.com/Asif-Saheer-k/novexdb/releases):
+Grab the latest installer for your platform from the [Releases page](https://github.com/novexdb/novexdb/releases):
 
 | Platform | File |
 |---|---|
@@ -123,7 +123,7 @@ That's it. The connection is yours, the key is yours, the data never leaves your
 ### Setup
 
 ```bash
-git clone https://github.com/Asif-Saheer-k/novexdb.git
+git clone https://github.com/novexdb/novexdb.git
 cd novexdb
 npm install
 ```

@@ -17,7 +17,7 @@ const COLUMNS: { heading: string; links: { href: string; label: string }[] }[] =
     heading: 'Developers',
     links: [
       { href: '/blog', label: 'Blog' },
-      { href: 'https://github.com/Asif-Saheer-k', label: 'GitHub' },
+      { href: 'https://github.com/novexdb/novexdb', label: 'GitHub' },
       { href: '/contact', label: 'Support' }
     ]
   },
@@ -33,7 +33,7 @@ const COLUMNS: { heading: string; links: { href: string; label: string }[] }[] =
 ]
 
 const SOCIALS: { href: string; label: string; icon: typeof Github }[] = [
-  { href: 'https://github.com/Asif-Saheer-k', label: 'GitHub', icon: Github },
+  { href: 'https://github.com/novexdb/novexdb', label: 'GitHub', icon: Github },
   { href: 'https://linkedin.com/in/asifzaheer', label: 'LinkedIn', icon: Linkedin },
   { href: 'https://twitter.com/asifzaheer', label: 'Twitter', icon: Twitter },
   { href: 'mailto:hello@novexdb.app', label: 'Email', icon: Mail }

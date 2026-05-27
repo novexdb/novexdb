@@ -21,7 +21,7 @@ rules; the rest is in the [README](README.md).
 ## Setup
 
 ```bash
-git clone https://github.com/Asif-Saheer-k/novexdb.git
+git clone https://github.com/novexdb/novexdb.git
 cd novexdb
 npm install
 npm run dev
