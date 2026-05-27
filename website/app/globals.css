@@ -1,0 +1,146 @@
+@import 'tailwindcss';
+
+/* NovexDB website — design tokens. Dark-mode-first, AI-product palette
+   with electric accents. Light-mode is intentionally not supported on the
+   marketing surface (matches Linear / Raycast / Supabase pattern). */
+@theme inline {
+  /* Neutral surfaces */
+  --color-bg: #07070b;
+  --color-surface: #0c0d12;
+  --color-surface-2: #11131a;
+  --color-line: #1c1f2a;
+  --color-line-strong: #2a2f3d;
+
+  /* Content */
+  --color-content: #f1f2f6;
+  --color-muted: #9aa0ad;
+  --color-subtle: #5d6373;
+
+  /* Brand — electric cyan → violet */
+  --color-accent: #7aa2ff;
+  --color-accent-soft: rgba(122, 162, 255, 0.14);
+  --color-cyan: #5ad2ff;
+  --color-violet: #b07aff;
+  --color-amber: #f5b049;
+  --color-success: #4ade80;
+  --color-danger: #ef4f4f;
+
+  /* Typography */
+  --font-sans:
+    Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono:
+    'JetBrains Mono', 'SF Mono', 'Fira Code', ui-monospace, monospace;
+}
+
+/* Force dark; we don't ship a light marketing theme. */
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background-color: var(--color-bg);
+  color: var(--color-content);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Background mesh: subtle dot grid + soft radial glow at the top.
+   The glow uses CSS variables so individual sections can override it. */
+body {
+  background-image:
+    radial-gradient(
+      circle at 50% -10%,
+      rgba(122, 162, 255, 0.18) 0%,
+      rgba(122, 162, 255, 0) 60%
+    ),
+    radial-gradient(
+      circle at 80% 8%,
+      rgba(176, 122, 255, 0.12) 0%,
+      rgba(176, 122, 255, 0) 50%
+    );
+  background-repeat: no-repeat;
+}
+
+/* Subtle dotted grid behind the hero — reusable via .grid-bg. */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-position: -1px -1px;
+  mask-image: radial-gradient(circle at center, black 30%, transparent 75%);
+}
+
+/* Reusable gradient text — used on hero + headlines. */
+.gradient-text {
+  background-image: linear-gradient(
+    120deg,
+    var(--color-content) 0%,
+    var(--color-cyan) 45%,
+    var(--color-violet) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Animated conic-gradient border — wrap any block with .gradient-border. */
+@keyframes gradient-spin {
+  to {
+    --gradient-angle: 360deg;
+  }
+}
+@property --gradient-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.gradient-border {
+  position: relative;
+  isolation: isolate;
+}
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--gradient-angle),
+    rgba(90, 210, 255, 0.0),
+    rgba(122, 162, 255, 0.8),
+    rgba(176, 122, 255, 0.6),
+    rgba(90, 210, 255, 0.0)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: gradient-spin 8s linear infinite;
+  pointer-events: none;
+}
+
+/* Soft glow orb — for ambient lighting in hero / showcase. */
+.glow-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(120px);
+  pointer-events: none;
+}
+
+/* Custom scrollbars for code blocks / tables in showcases. */
+.thin-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--color-line-strong);
+  border-radius: 999px;
+}

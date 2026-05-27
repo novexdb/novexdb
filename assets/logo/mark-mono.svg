@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="NovexDB">
+  <!--
+    Monochrome N mark, no background. Inherits color via `currentColor`,
+    so you can drop it inline in a React component and style with text-*.
+    Designed at 512×512 with no margin — caller is expected to size + pad.
+  -->
+  <g fill="currentColor">
+    <rect x="0" y="0" width="100" height="512" rx="14" ry="14"/>
+    <rect x="412" y="0" width="100" height="512" rx="14" ry="14"/>
+    <path d="M 100 0 L 200 0 L 412 512 L 312 512 Z"/>
+  </g>
+</svg>

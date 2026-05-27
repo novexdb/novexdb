@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" role="img" aria-label="NovexDB">
+  <!--
+    Horizontal lockup: bold N mark on the left + "NovexDB" wordmark on
+    the right. Used in the splash screen, the About dialog, and any
+    place that has room for the typographic name. The N here is the
+    same geometry as icon.svg, just scaled.
+  -->
+  <defs>
+    <linearGradient id="wm-bg" x1="0" y1="0" x2="320" y2="320" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3b82f6"/>
+      <stop offset="0.55" stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#1e3a8a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Mark in a rounded square. -->
+  <rect x="0" y="0" width="320" height="320" rx="70" ry="70" fill="url(#wm-bg)"/>
+  <g transform="translate(80 80)" fill="#ffffff">
+    <rect x="0" y="0" width="32" height="160" rx="5" ry="5"/>
+    <rect x="128" y="0" width="32" height="160" rx="5" ry="5"/>
+    <path d="M 32 0 L 64 0 L 128 160 L 96 160 Z"/>
+  </g>
+
+  <!--
+    Wordmark — "Novex" in solid `#0f172a` (matches dark UI content),
+    "DB" in the brand accent. Uses system UI sans so it renders
+    consistently in the About dialog without bundling a webfont.
+  -->
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif" font-weight="700" font-size="180" letter-spacing="-6">
+    <text x="380" y="218" fill="#0f172a">Novex</text>
+    <text x="888" y="218" fill="#2563eb">DB</text>
+  </g>
+</svg>

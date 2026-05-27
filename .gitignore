@@ -1,0 +1,36 @@
+# ── Dependencies ─────────────────────────────────────────────
+node_modules
+website/node_modules
+
+# ── Build output ─────────────────────────────────────────────
+# Electron build artefacts (electron-vite writes here)
+out
+dist
+.vite
+# Next.js build cache
+.next
+website/.next
+# TypeScript incremental build info
+*.tsbuildinfo
+# Generated platform icons (regen with `npm run icons`)
+build
+
+# ── Secrets & user data ──────────────────────────────────────
+.env
+.env.*
+!.env.example
+# AI credentials are stored in Electron userData but never commit
+# this filename anywhere in the tree by accident.
+ai-credentials.json
+
+# ── Test + coverage output ───────────────────────────────────
+coverage
+
+# ── OS / editor noise ────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.log
+.idea
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json

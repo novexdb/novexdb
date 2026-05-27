@@ -1,0 +1,113 @@
+@import 'tailwindcss';
+
+/* Class-based dark mode — the theme is driven by a `.dark` / `.light` class
+   that useTheme() sets on <html>, so it can override the OS preference. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Design tokens. `@theme inline` makes the generated utilities reference the
+   CSS variables live, so flipping the theme class re-themes the whole app. */
+@theme inline {
+  --color-app: var(--df-app);
+  --color-surface: var(--df-surface);
+  --color-elevated: var(--df-elevated);
+  --color-line: var(--df-line);
+  --color-line-strong: var(--df-line-strong);
+  --color-content: var(--df-content);
+  --color-muted: var(--df-muted);
+  --color-subtle: var(--df-subtle);
+  --color-accent: var(--df-accent);
+  --color-accent-hover: var(--df-accent-hover);
+  --color-accent-soft: var(--df-accent-soft);
+  --color-row-active: var(--df-row-active);
+  --color-danger: var(--df-danger);
+  --color-success: var(--df-success);
+  --color-warning: var(--df-warning);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, system-ui, sans-serif;
+  --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+}
+
+:root,
+.light {
+  --df-app: #ffffff;
+  --df-surface: #f6f8fa;
+  --df-elevated: #ffffff;
+  --df-line: #d8dee4;
+  --df-line-strong: #c2c9d1;
+  --df-content: #1f2328;
+  --df-muted: #656d76;
+  --df-subtle: #8c959f;
+  --df-accent: #2563eb;
+  --df-accent-hover: #1d4ed8;
+  --df-accent-soft: rgba(37, 99, 235, 0.1);
+  /* Neutral row-focus tint — darker than app + surface so it's visible in
+     light mode where elevated == app. */
+  --df-row-active: #e6ebf1;
+  --df-danger: #cf222e;
+  --df-success: #1a7f37;
+  --df-warning: #9a6700;
+  color-scheme: light;
+}
+
+.dark {
+  --df-app: #0d1117;
+  --df-surface: #161b22;
+  --df-elevated: #1c2128;
+  --df-line: #2a3038;
+  --df-line-strong: #444c56;
+  --df-content: #e6edf3;
+  --df-muted: #8b949e;
+  --df-subtle: #6e7681;
+  --df-accent: #4f8cff;
+  --df-accent-hover: #6ba1ff;
+  --df-accent-soft: rgba(79, 140, 255, 0.15);
+  /* Slightly lighter than elevated so the active row pops on the dark grid. */
+  --df-row-active: #22272e;
+  --df-danger: #f85149;
+  --df-success: #3fb950;
+  --df-warning: #d29922;
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background-color: var(--color-app);
+  color: var(--color-content);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Subtle, macOS-like scrollbars. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-line-strong);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-muted);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Frameless-window drag regions. */
+.drag-region {
+  -webkit-app-region: drag;
+}
+.no-drag {
+  -webkit-app-region: no-drag;
+}
