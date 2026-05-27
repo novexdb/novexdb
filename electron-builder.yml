@@ -52,7 +52,12 @@ mac:
   target:
     - dmg
     - zip
-  artifactName: ${productName}-${version}-${arch}.${ext}
+  # Drop ${version} from the filename so the GitHub URL
+  # `…/releases/latest/download/NovexDB-arm64.dmg` is stable across
+  # version bumps. The version is still visible inside the app's About
+  # dialog + the DMG's metadata, so users who keep multiple downloads
+  # can still tell them apart by file date.
+  artifactName: ${productName}-${arch}.${ext}
   # Code signing (uncomment + supply identity to publish signed builds):
   # identity: 'Developer ID Application: Your Name (TEAMID)'
   # hardenedRuntime: true
@@ -65,7 +70,9 @@ mac:
 win:
   target:
     - nsis
-  artifactName: ${productName}-${version}-setup.${ext}
+  # Same rationale as mac.artifactName — drop the version so the URL
+  # `…/releases/latest/download/NovexDB-setup.exe` stays stable.
+  artifactName: ${productName}-setup.${ext}
   # Code signing (uncomment + set env vars CSC_LINK + CSC_KEY_PASSWORD):
   # certificateFile: resources/win-cert.pfx
   # signingHashAlgorithms:
@@ -81,4 +88,4 @@ linux:
     - AppImage
     - deb
   category: Development
-  artifactName: ${productName}-${version}.${ext}
+  artifactName: ${productName}.${ext}
