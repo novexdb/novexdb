@@ -156,23 +156,26 @@ npm run icons        # rasterises every size, packs .icns + .ico
 
 ### Package for release
 
+Releases are cut automatically by [`.github/workflows/release.yml`](.github/workflows/release.yml) on every push to `main`:
+
+1. The workflow bumps the patch version (`0.1.0` → `0.1.1`), commits + tags.
+2. A matrix job builds macOS (arm64 + x64) and Windows (x64) in parallel.
+3. Installers + the `latest-mac.yml` / `latest.yml` manifests electron-updater reads are uploaded to a new [GitHub Release](https://github.com/novexdb/novexdb/releases).
+4. Installed copies of the app poll GitHub on their normal schedule (default: every 60 min) and offer the update.
+
+To ship a **major or minor** bump instead of a patch, edit `package.json`'s `version` manually before pushing — CI sees the bumped value and ships that.
+
+To build locally without releasing:
+
 ```bash
 npm run build:mac    # writes dist/NovexDB-x.y.z-arm64.dmg + .zip
 npm run build:win
 npm run build:linux
 ```
 
-See [docs on code signing + notarization](#code-signing--notarization) below.
+See [`docs/signing.md`](docs/signing.md) for code-signing + notarization setup.
 
-### Run the marketing website
-
-The Next.js marketing site lives in [`website/`](website/) as a separate project:
-
-```bash
-cd website
-npm install
-npm run dev          # http://localhost:3000
-```
+> The marketing site (novexdb.app) source lives in a private repo: [novexdb/website](https://github.com/novexdb/website).
 
 ---
 
@@ -192,7 +195,8 @@ novexdb/
 │   └── shared/            # types + IPC contract used by all three
 ├── assets/logo/           # source SVGs for the app icon + wordmark
 ├── build/                 # generated platform icons (.icns / .ico / .png)
-├── website/               # Next.js 15 marketing site
+├── .github/workflows/     # CI (typecheck + lint + tests) + Release (build + publish)
+├── docs/                  # signing, longer-form contributor docs
 └── scripts/               # generate-icons.mjs, patch-electron-bundle.mjs
 ```
 
@@ -254,18 +258,6 @@ A few quick rules:
 2. **Run `npm run typecheck && npm run lint && npm run test:run`** before opening the PR — CI runs all three.
 3. **Match the surrounding style.** No new code style debates, this is a one-person project right now.
 4. **No new top-level dependencies** without justification — every npm package added is one more thing to audit.
-
----
-
-## Code signing & notarization
-
-The shipped `npm run build:*` commands produce **unsigned** installers by default. macOS will warn "this app cannot be opened because the developer cannot be verified" on first launch — users can right-click → Open to bypass.
-
-For signed builds:
-
-- **macOS**: enrol in the Apple Developer Program ($99/yr), generate a Developer ID Application cert, set `CSC_LINK` + `CSC_KEY_PASSWORD` + `APPLE_ID` + `APPLE_APP_SPECIFIC_PASSWORD` + `APPLE_TEAM_ID`, uncomment the signing block in [`electron-builder.yml`](electron-builder.yml).
-- **Windows**: buy an OV/EV code-signing cert (~$200/yr), set `CSC_LINK` + `CSC_KEY_PASSWORD`, uncomment the Win signing block.
-- **Linux**: no signing needed.
 
 ---
 

@@ -1,0 +1,44 @@
+name: CI
+
+# Run cheap checks on every push (any branch) and every PR targeting main.
+# This is the "did you break anything obvious" gate — typecheck, lint,
+# unit tests. The actual app build lives in release.yml, which is
+# triggered only on main.
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  # Cancel older in-flight CI runs on the same branch — saves minutes
+  # when someone pushes a fixup commit before the previous run finishes.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: typecheck · lint · tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # `npm ci` runs our `postinstall` (scripts/patch-electron-bundle.mjs).
+      # That script exits silently on non-macOS, so Ubuntu is safe.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests
+        run: npm run test:run

@@ -1,0 +1,132 @@
+name: Release
+
+# Every push to `main` produces a new release.
+#
+#   1. The `bump` job auto-increments the patch version, pushes a
+#      `chore(release): vX.Y.Z [skip ci]` commit + a `vX.Y.Z` tag.
+#   2. The `build` matrix checks out *at the new tag* (so the artifacts'
+#      embedded version matches), then builds + uploads to the matching
+#      GitHub Release in parallel for macOS and Windows.
+#   3. electron-updater on installed copies polls GitHub on its normal
+#      schedule (default: every 60 min) and offers the update.
+#
+# Loop prevention: the bump commit carries `[skip ci]`, which GitHub
+# Actions natively respects — the second run never starts.
+#
+# To ship a minor or major bump instead of a patch, edit `package.json`
+# manually before pushing; CI sees the bumped version and ships that
+# instead of patch-bumping again (the `npm version patch` here is a
+# no-op when the version is already ahead of the latest tag).
+on:
+  push:
+    branches: [main]
+    # Docs / CI-config / website-only changes don't need a release.
+    paths-ignore:
+      - '**/*.md'
+      - '.github/**'
+      - 'docs/**'
+      - 'website/**'
+
+concurrency:
+  # Serialize releases — never run two in parallel, never cancel one
+  # mid-flight (a half-uploaded Release is harder to clean up than
+  # waiting an extra few minutes).
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────
+  # 1. Bump version + tag.
+  # ─────────────────────────────────────────────────────────────────────
+  bump:
+    name: Bump version & tag
+    # Don't re-trigger ourselves: the bump commit's message ends with
+    # `[skip ci]`. GitHub Actions respects that token by default, but
+    # belt-and-braces.
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    outputs:
+      new_version: ${{ steps.bump.outputs.new_version }}
+      new_tag: ${{ steps.bump.outputs.new_tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Need full history so `npm version` can create a tag relative
+          # to existing ones.
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Bump patch version + push tag
+        id: bump
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          NEW=$(npm version patch -m 'chore(release): v%s [skip ci]')
+          git push --follow-tags
+          echo "new_version=${NEW#v}" >> "$GITHUB_OUTPUT"
+          echo "new_tag=$NEW" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Bumped::Version is now $NEW"
+
+  # ─────────────────────────────────────────────────────────────────────
+  # 2. Build + publish per platform, in parallel.
+  # ─────────────────────────────────────────────────────────────────────
+  build:
+    name: Build & publish (${{ matrix.label }})
+    needs: bump
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    strategy:
+      # Don't let a Windows failure abort an in-flight macOS build —
+      # partial releases are easier to deal with than no release at all.
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            label: macOS (arm64 + x64)
+            cmd: npx electron-builder --mac --arm64 --x64 --publish always
+          - os: windows-latest
+            label: Windows (x64)
+            cmd: npx electron-builder --win --x64 --publish always
+    runs-on: ${{ matrix.os }}
+    steps:
+      # Check out the tag the bump job just created so the artifacts'
+      # embedded version field matches the GitHub Release name.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.bump.outputs.new_tag }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Regenerate the platform icons from `assets/logo/icon.svg` so the
+      # bundled .icns / .ico match the current design. Idempotent — safe
+      # to run on every release.
+      - name: Generate icons
+        run: npm run icons
+
+      # electron-vite bundles main + preload + renderer to `out/`.
+      - name: Build app bundles
+        run: npm run build
+
+      # electron-builder reads `publish` from electron-builder.yml + uses
+      # GH_TOKEN to upload every artifact (DMG, ZIP, EXE, plus the
+      # `latest-mac.yml` / `latest.yml` manifests that electron-updater
+      # reads) to the GitHub Release matching the current package.json
+      # version.
+      - name: Package + publish
+        run: ${{ matrix.cmd }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
