@@ -263,7 +263,7 @@ A few quick rules:
 
 ## License
 
-[MIT](LICENSE) © Asif Zaheer
+[MIT](LICENSE) © Asif Saheer
 
 ---
 
