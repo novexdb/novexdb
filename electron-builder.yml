@@ -58,14 +58,32 @@ mac:
   # dialog + the DMG's metadata, so users who keep multiple downloads
   # can still tell them apart by file date.
   artifactName: ${productName}-${arch}.${ext}
-  # Code signing (uncomment + supply identity to publish signed builds):
-  # identity: 'Developer ID Application: Your Name (TEAMID)'
-  # hardenedRuntime: true
-  # gatekeeperAssess: false
-  # entitlements: resources/entitlements.mac.plist
-  # entitlementsInherit: resources/entitlements.mac.plist
-  # notarize:
-  #   teamId: TEAMID
+  # ── Code signing ──────────────────────────────────────────────────────────
+  # We deliberately DO NOT hardcode `identity` here. electron-builder
+  # auto-discovers the Developer ID identity from whichever keychain is
+  # available:
+  #   • Local builds      → your login.keychain (where the cert was imported).
+  #   • CI builds         → a temp keychain that electron-builder creates by
+  #                         importing $CSC_LINK (base64-encoded .p12) using
+  #                         $CSC_KEY_PASSWORD. Set both as GitHub Secrets.
+  # When neither is available, electron-builder logs a warning and produces
+  # an unsigned build instead of failing — so PRs/forks without secrets
+  # still build cleanly.
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: resources/entitlements.mac.plist
+  entitlementsInherit: resources/entitlements.mac.plist
+  # ── Notarization ──────────────────────────────────────────────────────────
+  # Disabled by default. electron-builder hard-fails if `notarize` is set
+  # but no credentials are present, which would break CI on machines
+  # without the App Store Connect API key. To enable:
+  #   1. Add GitHub Secrets APPLE_API_KEY (the .p8 contents, base64 or raw),
+  #      APPLE_API_KEY_ID, APPLE_API_ISSUER. (Or APPLE_ID +
+  #      APPLE_APP_SPECIFIC_PASSWORD + APPLE_TEAM_ID for the legacy path.)
+  #   2. Flip the line below from `false` to:
+  #        notarize:
+  #          teamId: LYPYNA67H9
+  notarize: false
 
 win:
   target:

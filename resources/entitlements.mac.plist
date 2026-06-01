@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Hardened-runtime entitlements for the Developer ID (non-App-Store) build.
+
+  Apple's notarization REQUIRES the hardened runtime, and Electron/V8 will
+  crash under it unless these three are granted:
+    * allow-jit                         — V8's JIT compiler maps RWX memory.
+    * allow-unsigned-executable-memory  — V8 generates code Apple didn't sign.
+    * disable-library-validation        — lets the app load its own bundled
+                                          native modules (.node) + frameworks
+                                          that aren't signed by our Team ID.
+
+
+  These are the standard, minimal set every Electron app ships with for
+  Developer ID distribution. We are NOT sandboxed (Developer ID apps don't
+  need the App Sandbox), so no com.apple.security.app-sandbox key here.
+-->
+<plist version="1.0">
+  <dict>
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+  </dict>
+</plist>

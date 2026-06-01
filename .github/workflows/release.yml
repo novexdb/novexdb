@@ -130,3 +130,18 @@ jobs:
         run: ${{ matrix.cmd }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # ── macOS code signing (electron-builder auto-discovers) ──────
+          # CSC_LINK is a base64-encoded .p12 bundle containing the
+          # "Developer ID Application" cert + its private key.
+          # CSC_KEY_PASSWORD is the .p12 export password.
+          # When either secret is missing, electron-builder skips signing
+          # with a warning instead of failing — so the pipeline still
+          # ships (unsigned) until both secrets are configured.
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          # ── macOS notarization (App Store Connect API key) ────────────
+          # Only used once `notarize` is flipped on in electron-builder.yml.
+          # Until then these are inert.
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
