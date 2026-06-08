@@ -88,14 +88,13 @@ Most SQL clients fall into one of two buckets: **fast but ugly** (DBeaver, pgAdm
 
 > ⚠️ **Early access.** v0.1 is rough around some edges. File issues if you find them.
 
-Grab the latest installer for your platform from the [Releases page](https://github.com/novexdb/novexdb/releases):
+Download the latest installer for your platform — these links always point at the most recent release and start downloading immediately:
 
-| Platform | File |
+| Platform | Download |
 |---|---|
-| macOS (Apple Silicon) | `NovexDB-x.y.z-arm64.dmg` |
-| macOS (Intel) | `NovexDB-x.y.z-x64.dmg` |
-| Windows | `NovexDB-x.y.z-setup.exe` |
-| Linux | `NovexDB-x.y.z.AppImage` or `.deb` |
+| macOS (Apple Silicon) | [NovexDB-arm64.dmg](https://github.com/novexdb/novexdb/releases/latest/download/NovexDB-arm64.dmg) |
+| macOS (Intel) | [NovexDB-x64.dmg](https://github.com/novexdb/novexdb/releases/latest/download/NovexDB-x64.dmg) |
+| Windows | [NovexDB-setup.exe](https://github.com/novexdb/novexdb/releases/latest/download/NovexDB-setup.exe) |
 
 Once installed, the app will silently check for updates on a schedule you control in *Settings → Updates*.
 
