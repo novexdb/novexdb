@@ -83,6 +83,11 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: write
+    # Surfaced so the S3 step's `if:` can skip cleanly on forks / PRs where the
+    # AWS secrets aren't configured (same graceful-skip idea as code signing).
+    # Evaluating the secret here yields "true"/"false" without exposing its value.
+    env:
+      HAS_AWS_CREDS: ${{ secrets.AWS_ACCESS_KEY_ID != '' && secrets.S3_BUCKET != '' }}
     strategy:
       # Don't let a Windows failure abort an in-flight macOS build —
       # partial releases are easier to deal with than no release at all.
@@ -145,3 +150,41 @@ jobs:
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+
+      # ── Mirror the user-facing installers to S3 ───────────────────────────
+      # The in-app auto-updater still pulls from GitHub Releases (the step
+      # above). This step ONLY copies the installers users click to download
+      # (.dmg / .exe) into your S3 bucket, so the website's download button can
+      # link straight to S3 instead of redirecting to GitHub.
+      #
+      # Each platform runner uploads its own installer(s); together they fill
+      # the bucket. Two prefixes:
+      #   • latest/           → stable URL the website links to (overwritten
+      #                          every release, so the link never changes)
+      #   • releases/v<ver>/  → immutable per-version archive
+      #
+      # The AWS CLI is preinstalled on GitHub-hosted runners. `shell: bash`
+      # forces Git Bash on the Windows runner so one script covers both OSes.
+      # Skips cleanly when the AWS secrets aren't set (forks / PRs).
+      - name: Publish installers to S3
+        if: env.HAS_AWS_CREDS == 'true'
+        shell: bash
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          VERSION: ${{ needs.bump.outputs.new_version }}
+        run: |
+          set -euo pipefail
+          # Stable "latest" copy. no-cache so the site always serves the newest
+          # build the moment this release finishes.
+          aws s3 cp dist/ "s3://${S3_BUCKET}/latest/" \
+            --recursive --exclude "*" --include "*.dmg" --include "*.exe" \
+            --cache-control "no-cache"
+          # Immutable per-version archive (filename already carries no version,
+          # so the prefix is what keeps old builds reachable).
+          aws s3 cp dist/ "s3://${S3_BUCKET}/releases/v${VERSION}/" \
+            --recursive --exclude "*" --include "*.dmg" --include "*.exe" \
+            --cache-control "public, max-age=31536000, immutable"
+          echo "::notice title=S3::Uploaded installers to s3://${S3_BUCKET}/latest/ and /releases/v${VERSION}/"
