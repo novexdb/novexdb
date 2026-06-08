@@ -87,6 +87,12 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: write
+    env:
+      # All-or-nothing gate for notarization. electron-builder hard-fails on
+      # PARTIAL Apple creds, so we only stage them when every secret exists;
+      # when none do, notarization is simply skipped (build still ships signed).
+      # Evaluating secrets here yields "true"/"false" without exposing values.
+      HAS_APPLE_NOTARY: ${{ secrets.APPLE_API_KEY_P8 != '' && secrets.APPLE_API_KEY_ID != '' && secrets.APPLE_API_ISSUER != '' }}
     strategy:
       # Don't let a Windows failure abort an in-flight macOS build —
       # partial releases are easier to deal with than no release at all.
@@ -125,11 +131,38 @@ jobs:
       - name: Build app bundles
         run: npm run build
 
+      # ── Stage the App Store Connect API key for notarization (macOS) ──────
+      # `notarytool` needs the .p8 as a FILE PATH, not its contents — so decode
+      # the base64 secret to a temp file and hand the three env vars to the
+      # build step via $GITHUB_ENV. Runs only when all three Apple secrets exist
+      # (HAS_APPLE_NOTARY); otherwise the build still ships, signed but
+      # un-notarized. `openssl base64 -d` is used (portable on the macOS runner).
+      - name: Stage Apple API key (notarization)
+        if: runner.os == 'macOS' && env.HAS_APPLE_NOTARY == 'true'
+        shell: bash
+        env:
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          set -euo pipefail
+          KEYDIR="$RUNNER_TEMP/asc"
+          mkdir -p "$KEYDIR"
+          printf '%s' "$APPLE_API_KEY_P8" | openssl base64 -d -A > "$KEYDIR/AuthKey.p8"
+          {
+            echo "APPLE_API_KEY=$KEYDIR/AuthKey.p8"
+            echo "APPLE_API_KEY_ID=$APPLE_API_KEY_ID"
+            echo "APPLE_API_ISSUER=$APPLE_API_ISSUER"
+          } >> "$GITHUB_ENV"
+          echo "Staged App Store Connect API key for notarytool"
+
       # electron-builder reads `publish` from electron-builder.yml + uses
       # GH_TOKEN to upload every artifact (DMG, ZIP, EXE, plus the
       # `latest-mac.yml` / `latest.yml` manifests that electron-updater
       # reads) to the GitHub Release matching the current package.json
-      # version.
+      # version. macOS notarization automatically picks up the
+      # APPLE_API_KEY / _KEY_ID / _ISSUER vars staged by the step above
+      # (when absent, electron-builder just skips notarization).
       - name: Package + publish
         run: ${{ matrix.cmd }}
         env:
@@ -143,9 +176,3 @@ jobs:
           # ships (unsigned) until both secrets are configured.
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
-          # ── macOS notarization (App Store Connect API key) ────────────
-          # Only used once `notarize` is flipped on in electron-builder.yml.
-          # Until then these are inert.
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
