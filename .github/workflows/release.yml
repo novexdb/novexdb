@@ -18,6 +18,10 @@ name: Release
 # instead of patch-bumping again (the `npm version patch` here is a
 # no-op when the version is already ahead of the latest tag).
 on:
+  # Manual "Run workflow" button (Actions tab) or `gh workflow run release.yml`.
+  # Cuts a release on demand — e.g. to verify a code-signing fix — without
+  # having to push app code. Runs the same bump + build + publish flow.
+  workflow_dispatch:
   push:
     branches: [main]
     # Docs / CI-config / website-only changes don't need a release.
