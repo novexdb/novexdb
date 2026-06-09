@@ -14,9 +14,9 @@ name: Release
 # Actions natively respects — the second run never starts.
 #
 # To ship a minor or major bump instead of a patch, edit `package.json`
-# manually before pushing; CI sees the bumped version and ships that
-# instead of patch-bumping again (the `npm version patch` here is a
-# no-op when the version is already ahead of the latest tag).
+# manually before pushing; the bump job detects that the version is
+# already ahead of the latest tag and ships it as-is (tagging the current
+# commit) rather than patch-bumping again.
 on:
   # Manual "Run workflow" button (Actions tab) or `gh workflow run release.yml`.
   # Cuts a release on demand — e.g. to verify a code-signing fix — without
@@ -67,16 +67,32 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Bump patch version + push tag
+      - name: Bump version + push tag
         id: bump
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          NEW=$(npm version patch -m 'chore(release): v%s [skip ci]')
+          # Ensure tags are present so `git describe` below sees the latest one
+          # (the idempotency check relies on it).
+          git fetch --tags --force origin
+          # Honor a manual version bump: if package.json is already AHEAD of the
+          # latest tag (someone edited it for a minor/major release), ship that
+          # version as-is — just tag the current commit. Otherwise auto-patch.
+          PKG="$(node -p "require('./package.json').version")"
+          LATEST="$(git describe --tags --abbrev=0 2>/dev/null || echo 0.0.0)"
+          LATEST="${LATEST#v}"
+          HIGHEST="$(printf '%s\n%s\n' "$PKG" "$LATEST" | sort -V | tail -1)"
+          if [ "$PKG" != "$LATEST" ] && [ "$HIGHEST" = "$PKG" ]; then
+            NEW="v$PKG"
+            git tag -a "$NEW" -m "chore(release): $NEW"
+            echo "::notice title=Manual bump::Shipping pre-set version $NEW"
+          else
+            NEW=$(npm version patch -m 'chore(release): v%s [skip ci]')
+            echo "::notice title=Auto patch::Bumped to $NEW"
+          fi
           git push --follow-tags
           echo "new_version=${NEW#v}" >> "$GITHUB_OUTPUT"
           echo "new_tag=$NEW" >> "$GITHUB_OUTPUT"
-          echo "::notice title=Bumped::Version is now $NEW"
 
   # ─────────────────────────────────────────────────────────────────────
   # 2. Build + publish per platform, in parallel.
