@@ -1,6 +1,6 @@
 {
   "name": "novexdb",
-  "version": "0.1.8",
+  "version": "0.2.0",
   "description": "A fast, modern, AI-powered database management desktop application",
   "main": "./out/main/index.js",
   "author": "NovexDB",
@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.98.0",
+    "@google/genai": "^2.8.0",
     "@monaco-editor/react": "^4.6.0",
     "@tanstack/react-virtual": "^3.11.2",
     "clsx": "^2.1.1",
@@ -44,6 +45,7 @@
     "react-markdown": "^9.0.3",
     "remark-gfm": "^4.0.0",
     "sql-formatter": "^15.4.9",
+    "ssh2": "^1.17.0",
     "tailwind-merge": "^2.6.0",
     "zod": "^3.24.1",
     "zustand": "^5.0.2"
@@ -57,6 +59,7 @@
     "@types/pg-copy-streams": "^1.2.5",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
+    "@types/ssh2": "^1.15.5",
     "@vitejs/plugin-react": "^4.3.4",
     "@vitest/coverage-v8": "^4.1.7",
     "electron": "^34.0.0",

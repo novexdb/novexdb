@@ -4,9 +4,17 @@ import type { ActiveConnectionInfo } from '@shared/types/database'
 import type { SchemaSnapshot } from '@shared/types/schema'
 import type {
   CancelQueryPayload,
+  CloneDone,
+  CloneFailure,
+  CloneProgress,
   ExecuteBatchPayload,
   ExecuteBatchResult,
   ExecuteQueryPayload,
+  ExportContents,
+  ExportDone,
+  ExportFailure,
+  ExportFormat,
+  ExportProgress,
   FileExportPayload,
   FileExportResult,
   FileOpenPayload,
@@ -77,6 +85,20 @@ export interface SqlImportHandlers {
   onError: (failure: SqlImportFailure) => void
 }
 
+/** Callbacks for a streaming database export (wired by the preload). */
+export interface DbExportHandlers {
+  onProgress: (progress: ExportProgress) => void
+  onDone: (done: ExportDone) => void
+  onError: (failure: ExportFailure) => void
+}
+
+/** Callbacks for a streaming database clone (wired by the preload). */
+export interface DbCloneHandlers {
+  onProgress: (progress: CloneProgress) => void
+  onDone: (done: CloneDone) => void
+  onError: (failure: CloneFailure) => void
+}
+
 /** Callbacks for auto-update events (wired by the preload).
  *  `onChecking` / `onNotAvailable` are optional so existing call-sites
  *  (which only need available/progress/downloaded/error) don't need to
@@ -133,11 +155,23 @@ export const IpcChannels = {
   fileExport: 'file:export',
   fileOpen: 'file:open',
   fileOpenSql: 'file:open-sql',
+  filePickKey: 'file:pick-key',
+  filePickSave: 'file:pick-save',
   sqlImportStart: 'sql:import:start',
   sqlImportProgress: 'sql:import:progress',
   sqlImportDone: 'sql:import:done',
   sqlImportError: 'sql:import:error',
   sqlImportCancel: 'sql:import:cancel',
+  dbExportStart: 'db:export:start',
+  dbExportProgress: 'db:export:progress',
+  dbExportDone: 'db:export:done',
+  dbExportError: 'db:export:error',
+  dbExportCancel: 'db:export:cancel',
+  dbCloneStart: 'db:clone:start',
+  dbCloneProgress: 'db:clone:progress',
+  dbCloneDone: 'db:clone:done',
+  dbCloneError: 'db:clone:error',
+  dbCloneCancel: 'db:clone:cancel',
   aiStatus: 'ai:status',
   aiSaveConfig: 'ai:save-config',
   aiTest: 'ai:test',
@@ -206,10 +240,7 @@ export interface IpcApi {
     /** Lists every database on the connected server. */
     listDatabases: (connectionId: string) => Promise<IpcResult<string[]>>
     /** Creates a new database on the connected server. */
-    createDatabase: (payload: {
-      connectionId: string
-      name: string
-    }) => Promise<IpcResult<null>>
+    createDatabase: (payload: { connectionId: string; name: string }) => Promise<IpcResult<null>>
     /** Re-points the connection to a different database; returns the updated record. */
     switchDatabase: (payload: {
       connectionId: string
@@ -223,6 +254,25 @@ export interface IpcApi {
       schema: string
       table: string
     }) => Promise<IpcResult<string>>
+    /** Streams a whole-database dump to a file; returns a cancel function. */
+    exportDump: (
+      payload: {
+        connectionId: string
+        path: string
+        format: ExportFormat
+        contents: ExportContents
+      },
+      handlers: DbExportHandlers
+    ) => () => void
+    /** Clones the source DB into a target DB/connection; returns a cancel function. */
+    cloneDatabase: (
+      payload: {
+        sourceConnectionId: string
+        targetConnectionId: string
+        targetDatabase: string
+      },
+      handlers: DbCloneHandlers
+    ) => () => void
   }
   query: {
     execute: (payload: ExecuteQueryPayload) => Promise<IpcResult<QueryResultSet>>
@@ -244,6 +294,12 @@ export interface IpcApi {
     open: (payload: FileOpenPayload) => Promise<IpcResult<FileOpenResult>>
     /** Picks a .sql dump — returns its path (not contents) for streaming. */
     openSql: () => Promise<IpcResult<SqlImportPickResult>>
+    /** Picks an SSH private-key file and returns its absolute path (not content). */
+    pickKey: () => Promise<IpcResult<{ canceled: boolean; path?: string }>>
+    /** Native save dialog for an export; returns the chosen path (never writes). */
+    pickSave: (payload: {
+      defaultName: string
+    }) => Promise<IpcResult<{ canceled: boolean; path?: string }>>
   }
   sql: {
     /** Streams a .sql dump into the database; returns a cancel function. */

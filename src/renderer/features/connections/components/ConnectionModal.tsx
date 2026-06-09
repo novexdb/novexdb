@@ -1,9 +1,11 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useId, useState, type ReactNode } from 'react'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { Modal } from '@renderer/components/Modal'
 import { Button } from '@renderer/components/Button'
+import { Input } from '@renderer/components/Input'
 import { cn } from '@renderer/utils/cn'
 import { ConnectionForm } from '@renderer/features/connections/components/ConnectionForm'
+import { parseConnectionUrl } from '@renderer/features/connections/url-import'
 import { ENGINE_LABELS } from '@renderer/features/connections/constants'
 import { useConnectionStore } from '@renderer/features/connections/stores/connectionStore'
 import { useConnections } from '@renderer/features/connections/hooks/useConnections'
@@ -33,6 +35,8 @@ export function ConnectionModal(): ReactNode {
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [testing, setTesting] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [urlInput, setUrlInput] = useState('')
+  const importId = useId()
 
   // Re-seed the form every time the modal opens (for a new target).
   useEffect(() => {
@@ -42,6 +46,7 @@ export function ConnectionModal(): ReactNode {
     setFeedback(null)
     setTesting(false)
     setSaving(false)
+    setUrlInput('')
   }, [open, target])
 
   if (!open) return null
@@ -49,6 +54,20 @@ export function ConnectionModal(): ReactNode {
   const patch = (changes: Partial<ConnectionInput>): void => {
     setDraft((prev) => ({ ...prev, ...changes }))
     setFeedback(null)
+  }
+
+  const handleImport = (): void => {
+    const result = parseConnectionUrl(urlInput)
+    if (!result.ok) {
+      setFeedback({ kind: 'error', message: result.error })
+      return
+    }
+    setDraft((prev) => ({ ...prev, ...result.value }))
+    setErrors({})
+    setFeedback({
+      kind: 'success',
+      message: 'Imported — review the fields below, then Test or Create.'
+    })
   }
 
   const handleTest = async (): Promise<void> => {
@@ -60,6 +79,15 @@ export function ConnectionModal(): ReactNode {
     setErrors({})
     if (isEdit && draft.password === '') {
       setFeedback({ kind: 'error', message: 'Enter the password to test this connection' })
+      return
+    }
+    if (
+      isEdit &&
+      draft.ssh?.enabled &&
+      draft.ssh.authMethod === 'password' &&
+      (draft.ssh.password ?? '') === ''
+    ) {
+      setFeedback({ kind: 'error', message: 'Enter the SSH password to test this connection' })
       return
     }
     setTesting(true)
@@ -119,6 +147,42 @@ export function ConnectionModal(): ReactNode {
         </>
       }
     >
+      {!isEdit && (
+        <div className="mb-4 rounded-md border border-line bg-surface/40 p-3">
+          <label
+            htmlFor={importId}
+            className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-muted"
+          >
+            Import from URL
+          </label>
+          <div className="flex items-center gap-2">
+            <Input
+              id={importId}
+              value={urlInput}
+              placeholder="postgresql+ssh://user@bastion/user:pass@host/db?name=…"
+              onChange={(event) => setUrlInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  handleImport()
+                }
+              }}
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleImport}
+              disabled={!urlInput.trim()}
+            >
+              Import
+            </Button>
+          </div>
+          <p className="mt-1.5 text-[11px] text-subtle">
+            Paste a TablePlus-style connection URL to fill in the form below.
+          </p>
+        </div>
+      )}
+
       <ConnectionForm value={draft} errors={errors} isEdit={isEdit} onChange={patch} />
 
       {feedback && (

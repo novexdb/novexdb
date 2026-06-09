@@ -5,6 +5,8 @@ import { registerTableHandlers } from '@main/ipc/table.ipc'
 import { registerAiHandlers } from '@main/ipc/ai.ipc'
 import { registerFileHandlers } from '@main/ipc/file.ipc'
 import { registerSqlImportHandlers } from '@main/ipc/sql-import.ipc'
+import { registerDbExportHandlers } from '@main/ipc/db-export.ipc'
+import { registerDbCloneHandlers } from '@main/ipc/db-clone.ipc'
 import { registerSettingsHandlers } from '@main/ipc/settings.ipc'
 import { registerWorkspaceHandlers } from '@main/ipc/workspaces.ipc'
 import { registerWindowHandlers } from '@main/ipc/window.ipc'
@@ -21,6 +23,8 @@ export function registerIpcHandlers(): void {
   registerAiHandlers()
   registerFileHandlers()
   registerSqlImportHandlers()
+  registerDbExportHandlers()
+  registerDbCloneHandlers()
   registerSettingsHandlers()
   registerWorkspaceHandlers()
   registerWindowHandlers()

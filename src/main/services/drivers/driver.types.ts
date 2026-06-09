@@ -5,12 +5,14 @@ import type {
   SslMode
 } from '@shared/types/connection'
 import type { SchemaSnapshot } from '@shared/types/schema'
-import type { BatchStatement, ExecuteBatchResult, QueryResultSet } from '@shared/types/query'
 import type {
-  TableChangeSet,
-  TableDataPage,
-  TableMutateResult
-} from '@shared/types/table-data'
+  BatchStatement,
+  ExecuteBatchResult,
+  ExportContents,
+  ExportFormat,
+  QueryResultSet
+} from '@shared/types/query'
+import type { TableChangeSet, TableDataPage, TableMutateResult } from '@shared/types/table-data'
 
 /** The minimal parameter set a driver needs to open a connection. */
 export interface DriverConnectionParams {
@@ -55,6 +57,22 @@ export interface SqlImportOutcome {
   errors: string[]
 }
 
+/** Options for a whole-database export. */
+export interface ExportOptions {
+  format: ExportFormat
+  contents: ExportContents
+}
+
+/** Progress for an in-flight export (bytes written to disk + objects dumped). */
+export interface ExportProgressUpdate {
+  bytesWritten: number
+  objectCount: number
+}
+
+export interface ExportOutcome {
+  bytesWritten: number
+}
+
 /**
  * The engine-agnostic contract every database backend implements. PostgreSQL
  * is the first implementation; adding MySQL/MSSQL later means writing a new
@@ -84,10 +102,7 @@ export interface DatabaseDriver {
   cancel(connectionId: string, queryId: string): Promise<void>
 
   /** Runs a list of statements inside a single transaction (rolls back on error). */
-  executeBatch(
-    connectionId: string,
-    statements: BatchStatement[]
-  ): Promise<ExecuteBatchResult>
+  executeBatch(connectionId: string, statements: BatchStatement[]): Promise<ExecuteBatchResult>
 
   /** Streams a .sql dump file into the database inside one transaction. */
   importSqlDump(

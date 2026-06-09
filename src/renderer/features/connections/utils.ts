@@ -2,11 +2,19 @@ import { connectionInputSchema } from '@shared/schemas/connection.schema'
 import {
   CONNECTION_COLORS,
   DEFAULT_PORTS,
+  DEFAULT_SSH_CONFIG,
   ENGINE_OPTION_DEFAULTS
 } from '@renderer/features/connections/constants'
 import type { Connection, ConnectionInput } from '@shared/types/connection'
 
-export type ConnectionFieldErrors = Partial<Record<keyof ConnectionInput, string>>
+export type ConnectionFieldErrors = Partial<
+  Record<Exclude<keyof ConnectionInput, 'ssh'>, string>
+> & {
+  /** Per-field errors for the nested SSH config. */
+  ssh?: Partial<
+    Record<'host' | 'port' | 'username' | 'privateKeyPath' | 'password' | 'passphrase', string>
+  >
+}
 
 /** Build the initial form draft — defaults for create, prefilled for edit. */
 export function buildDraft(target: Connection | null): ConnectionInput {
@@ -20,7 +28,8 @@ export function buildDraft(target: Connection | null): ConnectionInput {
       username: '',
       password: '',
       ssl: 'prefer',
-      color: CONNECTION_COLORS[0]
+      color: CONNECTION_COLORS[0],
+      ssh: DEFAULT_SSH_CONFIG
     }
   }
   // Password is intentionally blank — it is never sent back to the renderer.
@@ -34,7 +43,12 @@ export function buildDraft(target: Connection | null): ConnectionInput {
     password: '',
     ssl: target.ssl,
     color: target.color,
-    options: target.options ?? ENGINE_OPTION_DEFAULTS[target.engine]
+    options: target.options ?? ENGINE_OPTION_DEFAULTS[target.engine],
+    // Prefill SSH metadata; secrets never come back to the renderer, so the
+    // password/passphrase stay blank ("keep existing" on save).
+    ssh: target.ssh
+      ? { ...DEFAULT_SSH_CONFIG, ...target.ssh, password: '', passphrase: '' }
+      : DEFAULT_SSH_CONFIG
   }
 }
 
@@ -49,9 +63,17 @@ export function validateDraft(draft: ConnectionInput): ValidationOutcome {
 
   const errors: ConnectionFieldErrors = {}
   for (const issue of parsed.error.issues) {
-    const key = issue.path[0]
-    if (typeof key === 'string' && !(key in errors)) {
-      errors[key as keyof ConnectionInput] = issue.message
+    const [first, second] = issue.path
+    if (first === 'ssh') {
+      if (typeof second === 'string') {
+        const key = second as keyof NonNullable<ConnectionFieldErrors['ssh']>
+        errors.ssh = errors.ssh ?? {}
+        if (!(key in errors.ssh)) errors.ssh[key] = issue.message
+      }
+      continue
+    }
+    if (typeof first === 'string' && !(first in errors)) {
+      errors[first as Exclude<keyof ConnectionInput, 'ssh'>] = issue.message
     }
   }
   return { ok: false, errors }
@@ -62,7 +84,15 @@ export function validateDraft(draft: ConnectionInput): ValidationOutcome {
  * means "keep the existing one", so the key is dropped rather than sent empty.
  */
 export function toUpdateChanges(data: ConnectionInput): Partial<ConnectionInput> {
-  if (data.password !== '') return data
-  const { password: _omit, ...rest } = data
-  return rest
+  const changes: Partial<ConnectionInput> = { ...data }
+  // Blank DB password = keep the existing one.
+  if (changes.password === '') delete changes.password
+  // Blank SSH secrets = keep existing — strip them from the nested object.
+  if (changes.ssh) {
+    const ssh = { ...changes.ssh }
+    if (ssh.password === '') delete ssh.password
+    if (ssh.passphrase === '') delete ssh.passphrase
+    changes.ssh = ssh
+  }
+  return changes
 }

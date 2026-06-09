@@ -19,7 +19,8 @@ interface ModelOption {
 
 const PROVIDERS: { id: AiProvider; label: string }[] = [
   { id: 'anthropic', label: 'Anthropic Claude' },
-  { id: 'openai', label: 'OpenAI GPT' }
+  { id: 'openai', label: 'OpenAI GPT' },
+  { id: 'gemini', label: 'Google Gemini' }
 ]
 
 /**
@@ -37,13 +38,19 @@ const MODELS_BY_PROVIDER: Record<AiProvider, ModelOption[]> = {
     { id: 'gpt-5-mini', label: 'GPT-5 mini — balanced (recommended)' },
     { id: 'gpt-5', label: 'GPT-5 — most capable' },
     { id: 'gpt-5-nano', label: 'GPT-5 nano — fastest' }
+  ],
+  gemini: [
+    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash — balanced (recommended)' },
+    { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro — most capable' },
+    { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite — fastest' }
   ]
 }
 
 /** Per-provider hint copy for the API-key field. */
 const KEY_HINTS: Record<AiProvider, { placeholder: string; envVar: string }> = {
   anthropic: { placeholder: 'sk-ant-…', envVar: 'ANTHROPIC_API_KEY' },
-  openai: { placeholder: 'sk-…', envVar: 'OPENAI_API_KEY' }
+  openai: { placeholder: 'sk-…', envVar: 'OPENAI_API_KEY' },
+  gemini: { placeholder: 'AIza…', envVar: 'GEMINI_API_KEY' }
 }
 
 type TestState =

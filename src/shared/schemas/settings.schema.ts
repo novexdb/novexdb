@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const themeModeSchema = z.enum(['light', 'dark', 'system'])
 
-export const aiProviderSchema = z.enum(['anthropic', 'openai'])
+export const aiProviderSchema = z.enum(['anthropic', 'openai', 'gemini'])
 
 export const pinnedTableSchema = z.object({
   connectionId: z.string().uuid(),

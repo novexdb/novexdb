@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import {
   ChevronDown,
+  Copy,
   Moon,
   PanelBottom,
   PanelLeft,
@@ -12,9 +13,11 @@ import { ipc } from '@renderer/services/ipc'
 import { cn } from '@renderer/utils/cn'
 import { IconButton } from '@renderer/components/IconButton'
 import { Tooltip } from '@renderer/components/Tooltip'
+import { ContextMenu, type ContextMenuEntry } from '@renderer/components/ContextMenu'
 import { useSettingsStore } from '@renderer/stores/settingsStore'
 import { useUiStore } from '@renderer/stores/uiStore'
 import { useConnectionStore } from '@renderer/features/connections/stores/connectionStore'
+import { CloneDatabaseModal } from '@renderer/features/explorer/components/CloneDatabaseModal'
 import { WindowControls } from '@renderer/layouts/WindowControls'
 import appIconUrl from '@renderer/assets/icon-256.png'
 
@@ -47,25 +50,16 @@ function PanelToggles(): ReactNode {
         label={railCollapsed ? 'Show connections' : 'Hide connections'}
         onClick={toggleRail}
       >
-        <Server
-          className={cn('h-4 w-4', railCollapsed ? 'text-subtle' : 'text-accent')}
-        />
+        <Server className={cn('h-4 w-4', railCollapsed ? 'text-subtle' : 'text-accent')} />
       </IconButton>
-      <IconButton
-        label={leftCollapsed ? 'Show sidebar' : 'Hide sidebar'}
-        onClick={toggleLeft}
-      >
-        <PanelLeft
-          className={cn('h-4 w-4', leftCollapsed ? 'text-subtle' : 'text-accent')}
-        />
+      <IconButton label={leftCollapsed ? 'Show sidebar' : 'Hide sidebar'} onClick={toggleLeft}>
+        <PanelLeft className={cn('h-4 w-4', leftCollapsed ? 'text-subtle' : 'text-accent')} />
       </IconButton>
       <IconButton
         label={bottomCollapsed ? 'Show bottom panel' : 'Hide bottom panel'}
         onClick={toggleBottom}
       >
-        <PanelBottom
-          className={cn('h-4 w-4', bottomCollapsed ? 'text-subtle' : 'text-accent')}
-        />
+        <PanelBottom className={cn('h-4 w-4', bottomCollapsed ? 'text-subtle' : 'text-accent')} />
       </IconButton>
     </>
   )
@@ -76,12 +70,21 @@ export function TitleBar(): ReactNode {
   const isMac = ipc.platform === 'darwin'
   const isFullScreen = useUiStore((s) => s.isFullScreen)
   const activeId = useConnectionStore((s) => s.activeConnectionId)
-  const active = useConnectionStore(
-    (s) => s.connections.find((c) => c.id === activeId) ?? null
-  )
+  const active = useConnectionStore((s) => s.connections.find((c) => c.id === activeId) ?? null)
   const isConnected = useConnectionStore((s) =>
     activeId ? s.statuses[activeId] === 'connected' : false
   )
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
+  const [cloneOpen, setCloneOpen] = useState(false)
+
+  const chipMenuItems: ContextMenuEntry[] = [
+    {
+      id: 'clone-db',
+      label: 'Clone database…',
+      icon: <Copy className="h-3.5 w-3.5" />,
+      onSelect: () => setCloneOpen(true)
+    }
+  ]
 
   return (
     <header className="drag-region flex h-9 shrink-0 items-center border-b border-line bg-surface">
@@ -108,16 +111,18 @@ export function TitleBar(): ReactNode {
             type="button"
             disabled={!isConnected}
             onClick={() => useUiStore.getState().openDatabasePicker()}
+            onContextMenu={(event) => {
+              if (!isConnected) return
+              event.preventDefault()
+              setMenu({ x: event.clientX, y: event.clientY })
+            }}
             title={isConnected ? 'Open database' : undefined}
             className={cn(
               'no-drag flex items-center gap-1.5 rounded-full bg-app px-2 py-0.5 transition-colors',
               isConnected ? 'hover:bg-elevated' : 'cursor-default'
             )}
           >
-            <span
-              className="h-1.5 w-1.5 rounded-full"
-              style={{ backgroundColor: active.color }}
-            />
+            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: active.color }} />
             <span className="text-[11px] text-muted">{active.name}</span>
             <span className="text-[11px] text-subtle">/</span>
             <span className="text-[11px] text-content">{active.database}</span>
@@ -138,6 +143,13 @@ export function TitleBar(): ReactNode {
       </div>
 
       {!isMac && <WindowControls />}
+
+      {menu && (
+        <ContextMenu x={menu.x} y={menu.y} items={chipMenuItems} onClose={() => setMenu(null)} />
+      )}
+      {cloneOpen && activeId && (
+        <CloneDatabaseModal connectionId={activeId} onClose={() => setCloneOpen(false)} />
+      )}
     </header>
   )
 }

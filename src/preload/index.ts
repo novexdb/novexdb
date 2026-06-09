@@ -3,6 +3,12 @@ import { IpcChannels } from '@shared/ipc-contract'
 import type { IpcApi } from '@shared/ipc-contract'
 import type { AiChatChunk, AiChatDone, AiChatFailure } from '@shared/types/ai'
 import type {
+  CloneDone,
+  CloneFailure,
+  CloneProgress,
+  ExportDone,
+  ExportFailure,
+  ExportProgress,
   SqlImportDone,
   SqlImportFailure,
   SqlImportProgress
@@ -40,7 +46,71 @@ const api: IpcApi = {
     createDatabase: (payload) => ipcRenderer.invoke(IpcChannels.dbCreateDatabase, payload),
     switchDatabase: (payload) => ipcRenderer.invoke(IpcChannels.dbSwitchDatabase, payload),
     activeConnections: () => ipcRenderer.invoke(IpcChannels.dbActiveConnections),
-    scriptCreate: (payload) => ipcRenderer.invoke(IpcChannels.dbScriptCreate, payload)
+    scriptCreate: (payload) => ipcRenderer.invoke(IpcChannels.dbScriptCreate, payload),
+    exportDump: (payload, handlers) => {
+      const exportId = crypto.randomUUID()
+
+      const onProgress = (_event: IpcRendererEvent, data: ExportProgress): void => {
+        if (data.exportId === exportId) handlers.onProgress(data)
+      }
+      const onDone = (_event: IpcRendererEvent, data: ExportDone): void => {
+        if (data.exportId !== exportId) return
+        cleanup()
+        handlers.onDone(data)
+      }
+      const onError = (_event: IpcRendererEvent, data: ExportFailure): void => {
+        if (data.exportId !== exportId) return
+        cleanup()
+        handlers.onError(data)
+      }
+      function cleanup(): void {
+        ipcRenderer.removeListener(IpcChannels.dbExportProgress, onProgress)
+        ipcRenderer.removeListener(IpcChannels.dbExportDone, onDone)
+        ipcRenderer.removeListener(IpcChannels.dbExportError, onError)
+      }
+
+      ipcRenderer.on(IpcChannels.dbExportProgress, onProgress)
+      ipcRenderer.on(IpcChannels.dbExportDone, onDone)
+      ipcRenderer.on(IpcChannels.dbExportError, onError)
+      ipcRenderer.send(IpcChannels.dbExportStart, { exportId, ...payload })
+
+      return () => {
+        cleanup()
+        ipcRenderer.send(IpcChannels.dbExportCancel, { exportId })
+      }
+    },
+    cloneDatabase: (payload, handlers) => {
+      const cloneId = crypto.randomUUID()
+
+      const onProgress = (_event: IpcRendererEvent, data: CloneProgress): void => {
+        if (data.cloneId === cloneId) handlers.onProgress(data)
+      }
+      const onDone = (_event: IpcRendererEvent, data: CloneDone): void => {
+        if (data.cloneId !== cloneId) return
+        cleanup()
+        handlers.onDone(data)
+      }
+      const onError = (_event: IpcRendererEvent, data: CloneFailure): void => {
+        if (data.cloneId !== cloneId) return
+        cleanup()
+        handlers.onError(data)
+      }
+      function cleanup(): void {
+        ipcRenderer.removeListener(IpcChannels.dbCloneProgress, onProgress)
+        ipcRenderer.removeListener(IpcChannels.dbCloneDone, onDone)
+        ipcRenderer.removeListener(IpcChannels.dbCloneError, onError)
+      }
+
+      ipcRenderer.on(IpcChannels.dbCloneProgress, onProgress)
+      ipcRenderer.on(IpcChannels.dbCloneDone, onDone)
+      ipcRenderer.on(IpcChannels.dbCloneError, onError)
+      ipcRenderer.send(IpcChannels.dbCloneStart, { cloneId, ...payload })
+
+      return () => {
+        cleanup()
+        ipcRenderer.send(IpcChannels.dbCloneCancel, { cloneId })
+      }
+    }
   },
   query: {
     execute: (payload) => ipcRenderer.invoke(IpcChannels.queryExecute, payload),
@@ -58,7 +128,9 @@ const api: IpcApi = {
   file: {
     export: (payload) => ipcRenderer.invoke(IpcChannels.fileExport, payload),
     open: (payload) => ipcRenderer.invoke(IpcChannels.fileOpen, payload),
-    openSql: () => ipcRenderer.invoke(IpcChannels.fileOpenSql)
+    openSql: () => ipcRenderer.invoke(IpcChannels.fileOpenSql),
+    pickKey: () => ipcRenderer.invoke(IpcChannels.filePickKey),
+    pickSave: (payload) => ipcRenderer.invoke(IpcChannels.filePickSave, payload)
   },
   sql: {
     importDump: (payload, handlers) => {
@@ -158,14 +230,12 @@ const api: IpcApi = {
     close: () => ipcRenderer.invoke(IpcChannels.windowClose),
     isMaximized: () => ipcRenderer.invoke(IpcChannels.windowIsMaximized),
     isFullScreen: () => ipcRenderer.invoke(IpcChannels.windowIsFullScreen),
-    openWithConnection: (id) =>
-      ipcRenderer.invoke(IpcChannels.windowOpenWithConnection, id),
+    openWithConnection: (id) => ipcRenderer.invoke(IpcChannels.windowOpenWithConnection, id),
     subscribeFullScreen: (handler) => {
       const listener = (_event: IpcRendererEvent, isFullScreen: boolean): void =>
         handler(isFullScreen)
       ipcRenderer.on(IpcChannels.windowFullScreenChanged, listener)
-      return () =>
-        ipcRenderer.removeListener(IpcChannels.windowFullScreenChanged, listener)
+      return () => ipcRenderer.removeListener(IpcChannels.windowFullScreenChanged, listener)
     }
   },
   update: {
@@ -178,10 +248,8 @@ const api: IpcApi = {
         handlers.onChecking?.(data)
       const onAvailable = (_event: IpcRendererEvent, data: UpdateVersionInfo): void =>
         handlers.onAvailable(data)
-      const onNotAvailable = (
-        _event: IpcRendererEvent,
-        data: UpdateNotAvailableInfo
-      ): void => handlers.onNotAvailable?.(data)
+      const onNotAvailable = (_event: IpcRendererEvent, data: UpdateNotAvailableInfo): void =>
+        handlers.onNotAvailable?.(data)
       const onProgress = (_event: IpcRendererEvent, data: UpdateProgressInfo): void =>
         handlers.onProgress(data)
       const onDownloaded = (_event: IpcRendererEvent, data: UpdateVersionInfo): void =>
@@ -211,15 +279,12 @@ const api: IpcApi = {
     cancelScan: (payload) => ipcRenderer.invoke(IpcChannels.intelligenceScanCancel, payload),
     latest: (connectionId) => ipcRenderer.invoke(IpcChannels.intelligenceLatest, connectionId),
     list: () => ipcRenderer.invoke(IpcChannels.intelligenceList),
-    history: (connectionId) =>
-      ipcRenderer.invoke(IpcChannels.intelligenceHistory, connectionId),
+    history: (connectionId) => ipcRenderer.invoke(IpcChannels.intelligenceHistory, connectionId),
     subscribe: (handlers) => {
       const onProgress = (_event: IpcRendererEvent, data: ScanProgress): void =>
         handlers.onProgress(data)
-      const onDone = (_event: IpcRendererEvent, data: ScanResult): void =>
-        handlers.onDone(data)
-      const onError = (_event: IpcRendererEvent, data: ScanFailure): void =>
-        handlers.onError(data)
+      const onDone = (_event: IpcRendererEvent, data: ScanResult): void => handlers.onDone(data)
+      const onError = (_event: IpcRendererEvent, data: ScanFailure): void => handlers.onError(data)
 
       ipcRenderer.on(IpcChannels.intelligenceScanProgress, onProgress)
       ipcRenderer.on(IpcChannels.intelligenceScanDone, onDone)

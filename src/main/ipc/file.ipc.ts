@@ -39,9 +39,7 @@ async function gunzipPreview(filePath: string): Promise<string> {
 }
 
 /** Classify a picked dump file from its magic bytes, and build a preview. */
-async function inspectSqlFile(
-  filePath: string
-): Promise<{ kind: SqlImportKind; preview: string }> {
+async function inspectSqlFile(filePath: string): Promise<{ kind: SqlImportKind; preview: string }> {
   const head = await readHead(filePath, SQL_PREVIEW_BYTES)
   if (head[0] === 0x1f && head[1] === 0x8b) {
     return { kind: 'gzip', preview: await gunzipPreview(filePath) }
@@ -142,6 +140,59 @@ export function registerFileHandlers(): void {
         preview,
         kind
       })
+    } catch (err) {
+      return failFrom(err)
+    }
+  })
+
+  // Picks an SSH private-key file and returns just its absolute path — the key
+  // bytes are read in the main process at connect time, never in the renderer.
+  ipcMain.handle(IpcChannels.filePickKey, async (event) => {
+    try {
+      const window = BrowserWindow.fromWebContents(event.sender)
+      const options: Electron.OpenDialogOptions = {
+        // SSH keys live in the ~/.ssh dotfolder and are usually extensionless
+        // (id_rsa, id_ed25519, or named after the host/user). Default to
+        // "All Files" so an extension filter doesn't grey them out on macOS.
+        properties: ['openFile', 'showHiddenFiles'],
+        filters: [
+          { name: 'All Files', extensions: ['*'] },
+          { name: 'Private key', extensions: ['pem', 'key', 'ppk', 'rsa', 'ed25519', 'p8'] }
+        ]
+      }
+      const { canceled, filePaths } = window
+        ? await dialog.showOpenDialog(window, options)
+        : await dialog.showOpenDialog(options)
+      if (canceled || filePaths.length === 0) return ok({ canceled: true })
+      return ok({ canceled: false, path: filePaths[0] })
+    } catch (err) {
+      return failFrom(err)
+    }
+  })
+
+  // Native save dialog for a database export — returns the chosen path only.
+  // The export job streams pg_dump/mysqldump straight to it; the dump (which
+  // can be gigabytes) never crosses IPC.
+  ipcMain.handle(IpcChannels.filePickSave, async (event, rawPayload) => {
+    try {
+      const defaultName = String(
+        (rawPayload as { defaultName?: unknown } | null)?.defaultName ?? 'export.sql'
+      )
+      const window = BrowserWindow.fromWebContents(event.sender)
+      const options: Electron.SaveDialogOptions = {
+        defaultPath: defaultName,
+        filters: [
+          { name: 'SQL dump', extensions: ['sql'] },
+          { name: 'Compressed SQL', extensions: ['gz'] },
+          { name: 'Postgres archive', extensions: ['dump'] },
+          { name: 'All Files', extensions: ['*'] }
+        ]
+      }
+      const { canceled, filePath } = window
+        ? await dialog.showSaveDialog(window, options)
+        : await dialog.showSaveDialog(options)
+      if (canceled || !filePath) return ok({ canceled: true })
+      return ok({ canceled: false, path: filePath })
     } catch (err) {
       return failFrom(err)
     }

@@ -2,26 +2,22 @@ import sql from 'mssql'
 import type { config as MssqlConfig, IRecordSet, IResult, Request } from 'mssql'
 import { MAX_RESULT_ROWS } from '@shared/types/query'
 import type { BatchStatement, ExecuteBatchResult, QueryResultSet } from '@shared/types/query'
-import type {
-  ConnectionOptions,
-  ConnectionTestResult,
-  SslMode
-} from '@shared/types/connection'
+import type { ConnectionOptions, ConnectionTestResult, SslMode } from '@shared/types/connection'
 import type { SchemaSnapshot } from '@shared/types/schema'
-import type {
-  TableChangeSet,
-  TableDataPage,
-  TableMutateResult
-} from '@shared/types/table-data'
+import type { TableChangeSet, TableDataPage, TableMutateResult } from '@shared/types/table-data'
 import { quoteMssqlIdent } from '@main/utils/sql'
 import { introspectMssql } from '@main/services/drivers/mssql-introspection'
 import {
   applyMssqlTableChanges,
   fetchMssqlTablePage
 } from '@main/services/drivers/mssql-table-data'
+import { exportMssqlDatabase } from '@main/services/drivers/mssql-export'
 import type {
   DatabaseDriver,
   DriverConnectionParams,
+  ExportOptions,
+  ExportOutcome,
+  ExportProgressUpdate,
   QueryExecuteOptions,
   SqlImportOutcome,
   SqlImportProgressUpdate,
@@ -96,7 +92,9 @@ function parseServerVersion(raw: string | undefined): string {
 function rowsAsArrays(recordset: IRecordSet<unknown> | undefined): unknown[][] {
   if (!recordset) return []
   // arrayRowMode rows are already arrays; the fallback handles older callers.
-  return recordset.map((row) => (Array.isArray(row) ? (row as unknown[]) : Object.values(row as object)))
+  return recordset.map((row) =>
+    Array.isArray(row) ? (row as unknown[]) : Object.values(row as object)
+  )
 }
 
 function buildResultSet(result: IResult<unknown>, durationMs: number): QueryResultSet {
@@ -114,7 +112,9 @@ function buildResultSet(result: IResult<unknown>, durationMs: number): QueryResu
       name: column.name,
       // tedious tags every column with a numeric type id; absent it we fall back to 0.
       dataTypeId:
-        (typeof column.type === 'function' ? (column.type as unknown as { id?: number }).id : (column.type as { id?: number })?.id) ?? 0
+        (typeof column.type === 'function'
+          ? (column.type as unknown as { id?: number }).id
+          : (column.type as { id?: number })?.id) ?? 0
     }))
 
   // SQL Server returns one rowsAffected entry per statement; summing matches the
@@ -284,6 +284,27 @@ export class MssqlDriver implements DatabaseDriver {
     throw new Error('SQL dump import is not yet supported for SQL Server connections')
   }
 
+  /**
+   * Generated-SQL export — no CLI dump tool exists for SQL Server, so we
+   * introspect + page rows into CREATE TABLE / INSERT statements. Not on the
+   * shared DatabaseDriver interface; called directly by the connection manager.
+   */
+  exportDatabase(
+    connectionId: string,
+    filePath: string,
+    options: ExportOptions,
+    onProgress: (update: ExportProgressUpdate) => void,
+    signal: AbortSignal
+  ): Promise<ExportOutcome> {
+    return exportMssqlDatabase(
+      this.requirePool(connectionId),
+      filePath,
+      options,
+      onProgress,
+      signal
+    )
+  }
+
   introspect(connectionId: string): Promise<SchemaSnapshot> {
     return introspectMssql(this.requirePool(connectionId))
   }
@@ -336,7 +357,10 @@ export class MssqlDriver implements DatabaseDriver {
       }
       return null
     } finally {
-      await pool.request().batch('SET SHOWPLAN_XML OFF').catch(() => undefined)
+      await pool
+        .request()
+        .batch('SET SHOWPLAN_XML OFF')
+        .catch(() => undefined)
     }
   }
 

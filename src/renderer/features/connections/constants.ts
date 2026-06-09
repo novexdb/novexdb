@@ -1,4 +1,4 @@
-import type { DatabaseEngine, SslMode } from '@shared/types/connection'
+import type { DatabaseEngine, SshAuthMethod, SshConfig, SslMode } from '@shared/types/connection'
 
 export const ENGINE_LABELS: Record<DatabaseEngine, string> = {
   postgres: 'PostgreSQL',
@@ -26,7 +26,10 @@ export const ENGINE_PLACEHOLDERS: Record<DatabaseEngine, { database: string; use
 
 /** Per-engine defaults that get merged into `options` when the user selects an engine. */
 export const ENGINE_OPTION_DEFAULTS: Partial<
-  Record<DatabaseEngine, { encrypt: boolean; trustServerCertificate: boolean; connectionTimeoutMs: number }>
+  Record<
+    DatabaseEngine,
+    { encrypt: boolean; trustServerCertificate: boolean; connectionTimeoutMs: number }
+  >
 > = {
   mssql: { encrypt: true, trustServerCertificate: false, connectionTimeoutMs: 15_000 }
 }
@@ -36,6 +39,25 @@ export const SSL_OPTIONS: { value: SslMode; label: string }[] = [
   { value: 'prefer', label: 'Prefer' },
   { value: 'require', label: 'Require' }
 ]
+
+export const DEFAULT_SSH_PORT = 22
+
+export const SSH_AUTH_OPTIONS: { value: SshAuthMethod; label: string }[] = [
+  { value: 'privateKey', label: 'Private key' },
+  { value: 'password', label: 'Password' }
+]
+
+/** SSH tunnel defaults seeded into a new connection draft — disabled by default. */
+export const DEFAULT_SSH_CONFIG: SshConfig = {
+  enabled: false,
+  host: '',
+  port: DEFAULT_SSH_PORT,
+  username: '',
+  authMethod: 'privateKey',
+  privateKeyPath: undefined,
+  password: '',
+  passphrase: ''
+}
 
 /** Accent colors a user can tag a connection with (shown in the sidebar). */
 export const CONNECTION_COLORS: string[] = [

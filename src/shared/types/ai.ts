@@ -1,6 +1,6 @@
 /** Shared AI-feature types — the contract between the renderer and the AI service. */
 
-export type AiProvider = 'anthropic' | 'openai'
+export type AiProvider = 'anthropic' | 'openai' | 'gemini'
 
 export type IssueSeverity = 'high' | 'medium' | 'low'
 

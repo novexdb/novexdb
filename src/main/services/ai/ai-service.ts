@@ -3,6 +3,7 @@ import { connectionManager } from '@main/services/connection-manager'
 import { aiConfigStore } from '@main/services/ai/ai-config-store'
 import { AnthropicProvider } from '@main/services/ai/providers/anthropic-provider'
 import { OpenAIProvider } from '@main/services/ai/providers/openai-provider'
+import { GeminiProvider } from '@main/services/ai/providers/gemini-provider'
 import type { LlmProvider, SystemBlock } from '@main/services/ai/providers/provider.types'
 import { buildSchemaContext, getSchema } from '@main/services/ai/schema-context'
 import { analyzeSql } from '@main/services/ai/sql-safety'
@@ -32,17 +33,19 @@ function clamp01(value: number): number {
  */
 class AiService {
   private async getProvider(): Promise<LlmProvider> {
-    const apiKey = await aiConfigStore.getApiKey()
+    const settings = await settingsStore.get()
+    const apiKey = await aiConfigStore.getApiKey(settings.aiProvider)
     if (!apiKey) {
       throw new Error('No AI API key configured. Add one in Settings → AI.')
     }
-    const settings = await settingsStore.get()
     // Single saved key per the credentials store — its provider is
     // whatever the user picked when they saved it. Switching provider in
     // Settings without re-entering the key will fail loudly on first use.
     switch (settings.aiProvider) {
       case 'openai':
         return new OpenAIProvider(apiKey, settings.aiModel)
+      case 'gemini':
+        return new GeminiProvider(apiKey, settings.aiModel)
       case 'anthropic':
       default:
         return new AnthropicProvider(apiKey, settings.aiModel)
@@ -61,7 +64,7 @@ class AiService {
   async getStatus(): Promise<AiStatus> {
     const settings = await settingsStore.get()
     return {
-      configured: await aiConfigStore.hasApiKey(),
+      configured: await aiConfigStore.hasApiKey(settings.aiProvider),
       provider: settings.aiProvider,
       model: settings.aiModel
     }

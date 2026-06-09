@@ -40,6 +40,7 @@ import { CloneTableModal } from '@renderer/features/explorer/components/CloneTab
 import { ExportTableModal } from '@renderer/features/explorer/components/ExportTableModal'
 import { ImportModal } from '@renderer/features/explorer/components/ImportModal'
 import { SqlImportModal } from '@renderer/features/explorer/components/SqlImportModal'
+import { ExportDatabaseModal } from '@renderer/features/explorer/components/ExportDatabaseModal'
 import { quoteRelation } from '@renderer/utils/sql'
 import type { TreeNode, TreeNodeKind } from '@renderer/features/explorer/types'
 import type { DatabaseEngine } from '@shared/types/connection'
@@ -89,9 +90,7 @@ function isRelationLeaf(node: TreeNode): node is TreeNode & {
   openTable: { schema: string; table: string }
 } {
   return (
-    (node.kind === 'table' ||
-      node.kind === 'view' ||
-      node.kind === 'materialized_view') &&
+    (node.kind === 'table' || node.kind === 'view' || node.kind === 'materialized_view') &&
     Boolean(node.openTable)
   )
 }
@@ -114,9 +113,7 @@ function TreeRow({ node, depth, forceExpand, onContextMenu }: TreeRowProps): Rea
   // (Tables, Indexes, …) and tables stay collapsed until the user opens them.
   // The synthetic Pinned group is always open so its contents are visible.
   const expanded =
-    (forceExpand && node.kind === 'schema') ||
-    node.id === PINNED_GROUP_ID ||
-    storeExpanded
+    (forceExpand && node.kind === 'schema') || node.id === PINNED_GROUP_ID || storeExpanded
   const Icon = NODE_ICON[node.kind]
 
   const openTable = (): void => {
@@ -173,7 +170,9 @@ function TreeRow({ node, depth, forceExpand, onContextMenu }: TreeRowProps): Rea
             )}
           />
         ) : Icon ? (
-          <Icon className={cn('h-3.5 w-3.5 shrink-0', NODE_ICON_COLOR[node.kind] ?? 'text-muted')} />
+          <Icon
+            className={cn('h-3.5 w-3.5 shrink-0', NODE_ICON_COLOR[node.kind] ?? 'text-muted')}
+          />
         ) : null}
 
         <span
@@ -185,9 +184,7 @@ function TreeRow({ node, depth, forceExpand, onContextMenu }: TreeRowProps): Rea
           {node.label}
         </span>
 
-        {node.kind === 'column' && node.pk && (
-          <Key className="h-3 w-3 shrink-0 text-warning" />
-        )}
+        {node.kind === 'column' && node.pk && <Key className="h-3 w-3 shrink-0 text-warning" />}
         {typeof node.count === 'number' && (
           <span className="shrink-0 text-[10px] text-subtle">{node.count}</span>
         )}
@@ -274,12 +271,12 @@ export function SchemaTree({ nodes, forceExpand }: SchemaTreeProps): ReactNode {
   const [exportTarget, setExportTarget] = useState<CloneModalState | null>(null)
   const [importState, setImportState] = useState<ImportModalState | null>(null)
   const [sqlImport, setSqlImport] = useState<SqlImportState | null>(null)
+  const [exportDb, setExportDb] = useState<{ connectionId: string } | null>(null)
   const { introspect } = useSchemaExplorer()
   const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
   // `?? []` covers two cases: the store has not finished loading yet, and a
   // running main process that pre-dates the pinnedTables field (hot-reload).
-  const pinnedTables: PinnedTable[] =
-    useSettingsStore((s) => s.settings.pinnedTables) ?? []
+  const pinnedTables: PinnedTable[] = useSettingsStore((s) => s.settings.pinnedTables) ?? []
   const updateSettings = useSettingsStore((s) => s.update)
 
   const activePins: PinnedTable[] = activeConnectionId
@@ -295,11 +292,7 @@ export function SchemaTree({ nodes, forceExpand }: SchemaTreeProps): ReactNode {
     const next = exists
       ? pinnedTables.filter(
           (p) =>
-            !(
-              p.connectionId === activeConnectionId &&
-              p.schema === schema &&
-              p.table === table
-            )
+            !(p.connectionId === activeConnectionId && p.schema === schema && p.table === table)
         )
       : [...pinnedTables, { connectionId: activeConnectionId, schema, table }]
     void updateSettings({ pinnedTables: next })
@@ -446,6 +439,15 @@ export function SchemaTree({ nodes, forceExpand }: SchemaTreeProps): ReactNode {
         ]
       },
       {
+        id: 'export-db',
+        label: 'Export database…',
+        icon: <Download className="h-3.5 w-3.5" />,
+        onSelect: () => {
+          const connectionId = useConnectionStore.getState().activeConnectionId
+          if (connectionId) setExportDb({ connectionId })
+        }
+      },
+      {
         id: 'new',
         label: 'New',
         icon: <Plus className="h-3.5 w-3.5" />,
@@ -467,15 +469,12 @@ export function SchemaTree({ nodes, forceExpand }: SchemaTreeProps): ReactNode {
     ]
   }
 
-  const relationItems = (
-    rel: Extract<RailMenu, { kind: 'relation' }>
-  ): ContextMenuEntry[] => {
+  const relationItems = (rel: Extract<RailMenu, { kind: 'relation' }>): ContextMenuEntry[] => {
     const { schema, table, relationKind } = rel
     const connState = useConnectionStore.getState()
     const connectionId = connState.activeConnectionId
     const engine: DatabaseEngine =
-      (connectionId &&
-        connState.connections.find((c) => c.id === connectionId)?.engine) ||
+      (connectionId && connState.connections.find((c) => c.id === connectionId)?.engine) ||
       'postgres'
 
     const qualified = quoteRelation(engine, schema, table)
@@ -720,12 +719,7 @@ export function SchemaTree({ nodes, forceExpand }: SchemaTreeProps): ReactNode {
       ))}
 
       {menu && (
-        <ContextMenu
-          x={menu.x}
-          y={menu.y}
-          items={menuItems}
-          onClose={() => setMenu(null)}
-        />
+        <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />
       )}
 
       {newTable && (
@@ -784,6 +778,13 @@ export function SchemaTree({ nodes, forceExpand }: SchemaTreeProps): ReactNode {
           kind={sqlImport.kind}
           error={sqlImport.error}
           onClose={() => setSqlImport(null)}
+        />
+      )}
+
+      {exportDb && (
+        <ExportDatabaseModal
+          connectionId={exportDb.connectionId}
+          onClose={() => setExportDb(null)}
         />
       )}
     </div>

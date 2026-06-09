@@ -1,3 +1,5 @@
+import type { Connection } from '@shared/types/connection'
+
 export interface QueryColumn {
   name: string
   dataTypeId: number
@@ -127,4 +129,92 @@ export interface SqlImportFailure {
 
 export interface SqlImportCancelPayload {
   importId: string
+}
+
+/** Whole-database export. `custom` (pg_dump custom archive) is Postgres-only. */
+export type ExportFormat = 'plain' | 'gzip' | 'custom'
+
+/** What the dump includes. */
+export type ExportContents = 'all' | 'schema' | 'data'
+
+/** Starts a streaming whole-database export to a file. */
+export interface ExportStartPayload {
+  exportId: string
+  connectionId: string
+  path: string
+  format: ExportFormat
+  contents: ExportContents
+}
+
+/** Throttled progress for an in-flight export. Total size is unknown upfront. */
+export interface ExportProgress {
+  exportId: string
+  bytesWritten: number
+  /** Tables/objects dumped so far. */
+  objectCount: number
+}
+
+/** Terminal success (or cancellation) of an export. */
+export interface ExportDone {
+  exportId: string
+  /** Absolute path the dump was written to. */
+  path: string
+  bytesWritten: number
+  durationMs: number
+  /** True when the user cancelled — the partial file is removed. */
+  cancelled: boolean
+}
+
+export interface ExportFailure {
+  exportId: string
+  error: string
+}
+
+export interface ExportCancelPayload {
+  exportId: string
+}
+
+/** Default save-dialog filename: `<db>-YYYY-MM-DD.<ext>`. */
+export function defaultExportFilename(
+  database: string,
+  format: ExportFormat,
+  now: Date = new Date()
+): string {
+  const ext = format === 'gzip' ? 'sql.gz' : format === 'custom' ? 'dump' : 'sql'
+  const date = now.toISOString().slice(0, 10)
+  const safe = database.replace(/[^\w.-]+/g, '_') || 'database'
+  return `${safe}-${date}.${ext}`
+}
+
+/** Clone (copy) a whole database into a target connection/database. */
+export interface CloneStartPayload {
+  cloneId: string
+  sourceConnectionId: string
+  targetConnectionId: string
+  targetDatabase: string
+}
+
+/** Two-phase progress: exporting the source, then importing into the target. */
+export interface CloneProgress {
+  cloneId: string
+  phase: 'export' | 'import'
+  bytes: number
+  count: number
+}
+
+export interface CloneDone {
+  cloneId: string
+  durationMs: number
+  cancelled: boolean
+  /** The updated target connection (post-switch) — the renderer upserts it. */
+  targetConnection?: Connection
+}
+
+export interface CloneFailure {
+  cloneId: string
+  error: string
+}
+
+export interface CloneCancelPayload {
+  cloneId: string
 }

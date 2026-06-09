@@ -50,7 +50,7 @@ Most SQL clients fall into one of two buckets: **fast but ugly** (DBeaver, pgAdm
 <td width="50%">
 
 ### 🤖 AI built in
-- **Bring-your-own-key** for Claude (Sonnet 4.6 / Opus 4.7 / Haiku 4.5) or OpenAI (GPT-5 / mini / nano)
+- **Bring-your-own-key** for Claude (Sonnet 4.6 / Opus 4.7 / Haiku 4.5), OpenAI (GPT-5 / mini / nano), or Google Gemini (2.5 Flash / Pro / Flash-Lite)
 - **Natural language → SQL** with full schema context
 - **One-click Explain, Optimize, Error-rescue** on any query
 - **Database-wide AI audit** — schema, performance, data quality, transactions, security

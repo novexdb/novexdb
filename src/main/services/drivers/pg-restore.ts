@@ -1,10 +1,7 @@
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import type { DriverConnectionParams } from '@main/services/drivers/driver.types'
-import type {
-  SqlImportOutcome,
-  SqlImportProgressUpdate
-} from '@main/services/drivers/driver.types'
+import type { SqlImportOutcome, SqlImportProgressUpdate } from '@main/services/drivers/driver.types'
 
 /** Common install locations — checked first, since a packaged app has a bare PATH. */
 const PG_RESTORE_CANDIDATES = [
@@ -32,7 +29,7 @@ function resolvePgRestore(): string {
 }
 
 /** Resolve a pg_dump binary — same candidate set as pg_restore. */
-function resolvePgDump(): string {
+export function resolvePgDump(): string {
   for (const candidate of PG_DUMP_CANDIDATES) {
     if (existsSync(candidate)) return candidate
   }
@@ -110,7 +107,7 @@ export function runPgRestore(
         new Error(
           err.code === 'ENOENT'
             ? 'pg_restore was not found. Install the PostgreSQL client tools ' +
-              '(e.g. `brew install libpq`) to import .dump / .tar archives.'
+                '(e.g. `brew install libpq`) to import .dump / .tar archives.'
             : err.message
         )
       )
@@ -186,7 +183,7 @@ export function runPgDumpSchema(
         new Error(
           err.code === 'ENOENT'
             ? 'pg_dump was not found. Install the PostgreSQL client tools ' +
-              '(e.g. `brew install libpq`) to copy table DDL.'
+                '(e.g. `brew install libpq`) to copy table DDL.'
             : err.message
         )
       )
