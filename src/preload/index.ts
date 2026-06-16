@@ -161,7 +161,8 @@ const api: IpcApi = {
       ipcRenderer.send(IpcChannels.sqlImportStart, {
         importId,
         connectionId: payload.connectionId,
-        path: payload.path
+        path: payload.path,
+        clean: payload.clean ?? false
       })
 
       return () => {

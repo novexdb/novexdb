@@ -14,7 +14,7 @@ export function registerSqlImportHandlers(): void {
   ipcMain.on(IpcChannels.sqlImportStart, (event, rawPayload) => {
     const parsed = sqlImportStartSchema.safeParse(rawPayload)
     if (!parsed.success) return
-    const { importId, connectionId, path } = parsed.data
+    const { importId, connectionId, path, clean } = parsed.data
 
     const controller = new AbortController()
     activeImports.set(importId, controller)
@@ -39,7 +39,8 @@ export function registerSqlImportHandlers(): void {
                 connectionId,
                 path,
                 onProgress,
-                controller.signal
+                controller.signal,
+                clean
               )
             : await connectionManager.importSqlDump(
                 connectionId,

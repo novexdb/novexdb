@@ -23,7 +23,9 @@ export const fileOpenSchema = z.object({
 export const sqlImportStartSchema = z.object({
   importId: z.string().uuid(),
   connectionId: z.string().uuid(),
-  path: z.string().min(1).max(4096)
+  path: z.string().min(1).max(4096),
+  // Archive restores only: `--clean --if-exists` to replace existing objects.
+  clean: z.boolean().optional().default(false)
 })
 
 export const sqlImportCancelSchema = z.object({

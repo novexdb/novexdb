@@ -275,12 +275,18 @@ class ConnectionManager {
     throw new Error(`Copy Creation SQL is not supported for "${record.engine}" yet`)
   }
 
-  /** Restores a binary pg_dump archive (.dump / .tar) by running pg_restore. */
+  /**
+   * Restores a binary pg_dump archive (.dump / .tar) by running pg_restore.
+   * `clean` (→ `--clean --if-exists`) drops & recreates existing objects so the
+   * restore replaces a non-empty database instead of erroring on "already
+   * exists". Off by default (and for clones, which target a fresh database).
+   */
   async restoreArchive(
     connectionId: string,
     filePath: string,
     onProgress: (update: SqlImportProgressUpdate) => void,
-    signal: AbortSignal
+    signal: AbortSignal,
+    clean = false
   ): Promise<SqlImportOutcome> {
     const record = await connectionStore.getRecord(connectionId)
     if (record.engine !== 'postgres') {
@@ -288,7 +294,13 @@ class ConnectionManager {
     }
     const password = await connectionStore.getPassword(connectionId)
     const endpoint = sshTunnelManager.endpointFor(connectionId) ?? undefined
-    return runPgRestore(toDriverParams(record, password, endpoint), filePath, onProgress, signal)
+    return runPgRestore(
+      toDriverParams(record, password, endpoint),
+      filePath,
+      onProgress,
+      signal,
+      clean
+    )
   }
 
   /**

@@ -42,12 +42,18 @@ export function resolvePgDump(): string {
  * cross-server restore does not fail on missing roles; pg_restore continues
  * past per-object errors by default. Progress and errors are parsed from its
  * `--verbose` stderr.
+ *
+ * When `clean` is set, `--clean --if-exists` drops each object before
+ * recreating it — used to REPLACE the contents of a database that already has
+ * these tables (otherwise every CREATE fails with "already exists"). This
+ * overwrites existing data for the archive's objects, so it is opt-in.
  */
 export function runPgRestore(
   params: DriverConnectionParams,
   filePath: string,
   onProgress: (update: SqlImportProgressUpdate) => void,
-  signal: AbortSignal
+  signal: AbortSignal,
+  clean = false
 ): Promise<SqlImportOutcome> {
   return new Promise((resolve, reject) => {
     const bin = resolvePgRestore()
@@ -62,6 +68,9 @@ export function runPgRestore(
       params.database,
       '--no-owner',
       '--no-privileges',
+      // Drop-and-recreate each object so a restore into a non-empty database
+      // replaces it instead of failing on "already exists".
+      ...(clean ? ['--clean', '--if-exists'] : []),
       '--verbose',
       filePath
     ]

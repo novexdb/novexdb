@@ -67,6 +67,8 @@ export function SqlImportModal({
   const [bytes, setBytes] = useState(0)
   const [statements, setStatements] = useState(0)
   const [result, setResult] = useState<ImportResult | null>(null)
+  // Archive restores only: drop & recreate existing objects (--clean).
+  const [clean, setClean] = useState(false)
 
   const cancelRef = useRef<(() => void) | null>(null)
 
@@ -79,7 +81,7 @@ export function SqlImportModal({
     setPhase('running')
     setErrorMsg(null)
     cancelRef.current = ipc.sql.importDump(
-      { connectionId, path },
+      { connectionId, path, clean: isArchive && clean },
       {
         onProgress: (p) => {
           setBytes(p.bytesProcessed)
@@ -248,6 +250,30 @@ export function SqlImportModal({
                 'Each statement runs independently — any that fail are skipped and ' +
                 'reported, like `psql`.'}
           </p>
+          {isArchive && (
+            <div className="space-y-2 rounded-md border border-line bg-app p-3">
+              <label className="flex items-center gap-2 text-xs text-content">
+                <input
+                  type="checkbox"
+                  className="h-3.5 w-3.5 accent-accent"
+                  checked={clean}
+                  onChange={(event) => setClean(event.target.checked)}
+                />
+                Replace existing objects (drop &amp; recreate)
+              </label>
+              <p className="text-[11px] text-subtle">
+                Restoring into a database that already has these tables otherwise fails with
+                “already exists”. With this on, each object is dropped and recreated (
+                <span className="font-mono">pg_restore --clean --if-exists</span>).
+              </p>
+              {clean && (
+                <p className="flex items-start gap-1.5 text-[11px] text-warning">
+                  <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" />
+                  Destructive — this overwrites the current data for every object in the archive.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
     </Modal>

@@ -302,9 +302,12 @@ export interface IpcApi {
     }) => Promise<IpcResult<{ canceled: boolean; path?: string }>>
   }
   sql: {
-    /** Streams a .sql dump into the database; returns a cancel function. */
+    /**
+     * Streams a .sql dump into the database; returns a cancel function.
+     * `clean` (archive restores only) drops & recreates existing objects.
+     */
     importDump: (
-      payload: { connectionId: string; path: string },
+      payload: { connectionId: string; path: string; clean?: boolean },
       handlers: SqlImportHandlers
     ) => () => void
   }
