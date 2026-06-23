@@ -31,7 +31,8 @@ const PROVIDERS: { id: AiProvider; label: string }[] = [
 const MODELS_BY_PROVIDER: Record<AiProvider, ModelOption[]> = {
   anthropic: [
     { id: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6 — balanced (recommended)' },
-    { id: 'claude-opus-4-7', label: 'Claude Opus 4.7 — most capable' },
+    { id: 'claude-opus-4-8', label: 'Claude Opus 4.8 — most capable' },
+    { id: 'claude-opus-4-7', label: 'Claude Opus 4.7 — previous generation' },
     { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 — fastest' }
   ],
   openai: [
