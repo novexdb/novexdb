@@ -1,23 +1,12 @@
 import pg from 'pg'
 import type { FieldDef, PoolConfig, QueryArrayResult } from 'pg'
 import { MAX_RESULT_ROWS } from '@shared/types/query'
-import type {
-  BatchStatement,
-  ExecuteBatchResult,
-  QueryResultSet
-} from '@shared/types/query'
+import type { BatchStatement, ExecuteBatchResult, QueryResultSet } from '@shared/types/query'
 import type { ConnectionTestResult, SslMode } from '@shared/types/connection'
 import type { SchemaSnapshot } from '@shared/types/schema'
-import type {
-  TableChangeSet,
-  TableDataPage,
-  TableMutateResult
-} from '@shared/types/table-data'
+import type { TableChangeSet, TableDataPage, TableMutateResult } from '@shared/types/table-data'
 import { introspectPostgres } from '@main/services/drivers/postgres-introspection'
-import {
-  applyTableChanges,
-  fetchTablePage
-} from '@main/services/drivers/postgres-table-data'
+import { applyTableChanges, fetchTablePage } from '@main/services/drivers/postgres-table-data'
 import { importSqlDump as runSqlImport } from '@main/services/drivers/postgres-sql-import'
 import { quoteIdent } from '@main/utils/sql'
 import type {
@@ -35,6 +24,11 @@ const POOL_DEFAULTS = {
   max: 5,
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 10_000,
+  // TCP keep-alive so idle connections to a remote server survive NAT/firewall
+  // idle timeouts and dead sockets are detected promptly — without it (pg
+  // defaults keepAlive to false) the next query just fails "connection lost".
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10_000,
   application_name: 'NovexDB'
 } satisfies Partial<PoolConfig>
 
@@ -51,7 +45,9 @@ function toPoolConfig(params: DriverConnectionParams): PoolConfig {
   return {
     host: params.host,
     port: params.port,
-    database: params.database,
+    // Blank database = connect to the server; fall back to the standard
+    // `postgres` maintenance DB (pg requires *some* database to connect to).
+    database: params.database || 'postgres',
     user: params.username,
     password: params.password,
     ssl: toSslConfig(params.ssl),
@@ -260,9 +256,7 @@ export class PostgresDriver implements DatabaseDriver {
   async explain(connectionId: string, sql: string): Promise<unknown> {
     const pool = this.requirePool(connectionId)
     // EXPLAIN without ANALYZE only plans the query — it never executes it.
-    const result = await pool.query<{ 'QUERY PLAN': unknown }>(
-      `EXPLAIN (FORMAT JSON) ${sql}`
-    )
+    const result = await pool.query<{ 'QUERY PLAN': unknown }>(`EXPLAIN (FORMAT JSON) ${sql}`)
     return result.rows[0]?.['QUERY PLAN'] ?? null
   }
 

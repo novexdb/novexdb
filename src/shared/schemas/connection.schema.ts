@@ -54,7 +54,9 @@ const connectionInputBase = z.object({
   engine: databaseEngineSchema,
   host: z.string().trim().min(1, 'Host is required').max(255),
   port: z.number().int().min(1).max(65535),
-  database: z.string().trim().min(1, 'Database is required').max(255),
+  // Optional — leave blank to connect to the server itself (the engine's
+  // default database) and pick a database afterwards. Empty string = "none".
+  database: z.string().trim().max(255),
   username: z.string().trim().min(1, 'Username is required').max(255),
   password: z.string().max(1024),
   ssl: sslModeSchema,

@@ -65,7 +65,8 @@ function toMssqlConfig(params: DriverConnectionParams): MssqlConfig {
     port: params.port,
     user: params.username,
     password: params.password,
-    database: params.database,
+    // Blank database = connect to the server's default DB (typically master).
+    database: params.database || undefined,
     connectionTimeout: params.options?.connectionTimeoutMs ?? DEFAULT_CONNECTION_TIMEOUT_MS,
     requestTimeout: 0,
     arrayRowMode: true,

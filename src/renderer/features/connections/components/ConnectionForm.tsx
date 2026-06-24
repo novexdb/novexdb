@@ -174,11 +174,11 @@ export function ConnectionForm({
         </Field>
       </div>
 
-      <Field label="Database" htmlFor={databaseId} error={errors.database}>
+      <Field label="Database (optional)" htmlFor={databaseId} error={errors.database}>
         <Input
           id={databaseId}
           value={value.database}
-          placeholder={placeholders.database}
+          placeholder={`${placeholders.database} — blank connects to the server`}
           invalid={Boolean(errors.database)}
           onChange={(event) => onChange({ database: event.target.value })}
         />

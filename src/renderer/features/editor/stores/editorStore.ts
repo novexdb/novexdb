@@ -20,6 +20,10 @@ export interface TableTab {
   table: string
   /** Optional — read once on mount to land on Data or Structure. */
   initialView?: TableTabInitialView
+  /** VS Code-style preview tab: opened on a single click, shown in italics
+   *  and reused (replaced) by the next single click. Promoted to a permanent
+   *  tab on double-click, drag, or when the same table is opened deliberately. */
+  preview?: boolean
 }
 
 export interface OverviewTab {
@@ -78,8 +82,11 @@ interface EditorState extends WorkspaceState {
     connectionId: string,
     schema: string,
     table: string,
-    initialView?: TableTabInitialView
+    initialView?: TableTabInitialView,
+    opts?: { preview?: boolean }
   ) => void
+  /** Pin a preview tab so the next single-click no longer replaces it. */
+  promoteTab: (id: string) => void
   openOverviewTab: (connectionId: string, schema: string) => void
   openIntelligenceTab: () => void
   openAnomaliesTab: () => void
@@ -129,8 +136,9 @@ export const useEditorStore = create<EditorState>((set) => ({
       }
     }),
 
-  openTableTab: (connectionId, schema, table, initialView) =>
+  openTableTab: (connectionId, schema, table, initialView, opts) =>
     set((state) => {
+      const preview = opts?.preview ?? false
       const existing = state.tabs.find(
         (tab): tab is TableTab =>
           tab.kind === 'table' &&
@@ -138,7 +146,20 @@ export const useEditorStore = create<EditorState>((set) => ({
           tab.schema === schema &&
           tab.table === table
       )
-      if (existing) return { activeTabId: existing.id }
+      if (existing) {
+        // A deliberate (non-preview) open promotes a tab that was only
+        // previewed; a preview open leaves its pinned state alone. Either
+        // way we just focus the tab that already exists.
+        if (!preview && existing.preview) {
+          return {
+            tabs: state.tabs.map((tab) =>
+              tab.id === existing.id ? { ...tab, preview: false } : tab
+            ),
+            activeTabId: existing.id
+          }
+        }
+        return { activeTabId: existing.id }
+      }
 
       const tab: TableTab = {
         id: crypto.randomUUID(),
@@ -147,10 +168,35 @@ export const useEditorStore = create<EditorState>((set) => ({
         connectionId,
         schema,
         table,
-        initialView
+        initialView,
+        preview
+      }
+
+      // A preview open reuses the single shared preview slot — replacing
+      // whatever was previewed there in place (VS Code behaviour) so single
+      // clicks don't pile up tabs. A permanent open appends a new tab.
+      if (preview) {
+        const previewIndex = state.tabs.findIndex(
+          (t) => t.kind === 'table' && t.preview
+        )
+        if (previewIndex !== -1) {
+          useTableDataStore.getState().dropTab(state.tabs[previewIndex].id)
+          const tabs = [...state.tabs]
+          tabs[previewIndex] = tab
+          return { tabs, activeTabId: tab.id }
+        }
       }
       return { tabs: [...state.tabs, tab], activeTabId: tab.id }
     }),
+
+  promoteTab: (id) =>
+    set((state) => ({
+      tabs: state.tabs.map((tab) =>
+        tab.kind === 'table' && tab.id === id && tab.preview
+          ? { ...tab, preview: false }
+          : tab
+      )
+    })),
 
   openOverviewTab: (connectionId, schema) =>
     set((state) => {

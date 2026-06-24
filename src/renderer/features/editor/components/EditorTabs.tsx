@@ -28,6 +28,7 @@ export function EditorTabs(): ReactNode {
   const closeAllTabs = useEditorStore((s) => s.closeAllTabs)
   const createTab = useEditorStore((s) => s.createTab)
   const reorderTab = useEditorStore((s) => s.reorderTab)
+  const promoteTab = useEditorStore((s) => s.promoteTab)
 
   // The id of the tab currently being dragged, and the would-be drop target.
   // Both are cleared on dragend / drop.
@@ -37,6 +38,8 @@ export function EditorTabs(): ReactNode {
   const handleDragStart = (event: DragEvent<HTMLDivElement>, id: string): void => {
     event.dataTransfer.effectAllowed = 'move'
     event.dataTransfer.setData('text/plain', id)
+    // Dragging a preview tab pins it, matching VS Code.
+    promoteTab(id)
     setDragId(id)
   }
 
@@ -71,6 +74,7 @@ export function EditorTabs(): ReactNode {
         {tabs.map((tab) => {
           const active = tab.id === activeTabId
           const isDragging = dragId === tab.id
+          const isPreview = tab.kind === 'table' && tab.preview === true
           const indicator =
             dragOver?.id === tab.id && dragId !== tab.id ? dragOver.side : null
           const TabIcon =
@@ -99,6 +103,7 @@ export function EditorTabs(): ReactNode {
               onDrop={(event) => handleDrop(event, tab.id)}
               onDragEnd={handleDragEnd}
               onClick={() => setActiveTab(tab.id)}
+              onDoubleClick={() => promoteTab(tab.id)}
               className={cn(
                 'group relative flex h-full min-w-0 items-center gap-1.5 border-r border-line px-3 transition-opacity',
                 active ? 'bg-app text-content' : 'text-muted hover:text-content',
@@ -120,7 +125,11 @@ export function EditorTabs(): ReactNode {
               <TabIcon
                 className={cn('h-3.5 w-3.5 shrink-0', active ? 'text-accent' : 'text-subtle')}
               />
-              <span className="max-w-[140px] truncate text-xs">{tab.title}</span>
+              <span
+                className={cn('max-w-[140px] truncate text-xs', isPreview && 'italic')}
+              >
+                {tab.title}
+              </span>
               <button
                 type="button"
                 aria-label={`Close ${tab.title}`}

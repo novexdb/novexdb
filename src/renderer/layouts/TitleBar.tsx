@@ -125,7 +125,11 @@ export function TitleBar(): ReactNode {
             <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: active.color }} />
             <span className="text-[11px] text-muted">{active.name}</span>
             <span className="text-[11px] text-subtle">/</span>
-            <span className="text-[11px] text-content">{active.database}</span>
+            {active.database ? (
+              <span className="text-[11px] text-content">{active.database}</span>
+            ) : (
+              <span className="text-[11px] italic text-subtle">Select database</span>
+            )}
             {isConnected && <ChevronDown className="h-3 w-3 text-subtle" />}
           </button>
         )}

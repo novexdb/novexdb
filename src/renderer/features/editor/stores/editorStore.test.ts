@@ -67,6 +67,79 @@ describe('editorStore — openTableTab', () => {
   })
 })
 
+describe('editorStore — preview tabs (VS Code style)', () => {
+  it('marks a single-click open as a preview tab', () => {
+    useEditorStore.getState().openTableTab('c1', 'public', 'users', undefined, { preview: true })
+    const tab = useEditorStore.getState().tabs[1]
+    expect(tab.kind === 'table' && tab.preview).toBe(true)
+  })
+
+  it('reuses the single preview slot — a second preview replaces the first', () => {
+    useEditorStore.getState().openTableTab('c1', 'public', 'users', undefined, { preview: true })
+    const firstId = useEditorStore.getState().tabs[1].id
+    useEditorStore.getState().openTableTab('c1', 'public', 'orders', undefined, { preview: true })
+    const state = useEditorStore.getState()
+    // Still only two tabs: the seed Query tab + the (replaced) preview tab.
+    expect(state.tabs).toHaveLength(2)
+    const tab = state.tabs[1]
+    expect(tab.kind === 'table' && tab.table).toBe('orders')
+    expect(tab.id).not.toBe(firstId)
+    expect(state.activeTabId).toBe(tab.id)
+  })
+
+  it('drops the replaced preview tab\'s data-store state', () => {
+    useEditorStore.getState().openTableTab('c1', 'public', 'users', undefined, { preview: true })
+    const firstId = useEditorStore.getState().tabs[1].id
+    useTableDataStore.setState({
+      tabs: {
+        [firstId]: {
+          page: null,
+          status: 'ready',
+          error: null,
+          pageIndex: 0,
+          pageSize: 100,
+          orderBy: null,
+          orderDir: 'asc',
+          search: '',
+          edits: {},
+          newRows: [],
+          deleted: [],
+          selected: [],
+          columnWidths: {}
+        }
+      }
+    })
+    useEditorStore.getState().openTableTab('c1', 'public', 'orders', undefined, { preview: true })
+    expect(useTableDataStore.getState().tabs[firstId]).toBeUndefined()
+  })
+
+  it('a permanent open appends instead of replacing the preview slot', () => {
+    useEditorStore.getState().openTableTab('c1', 'public', 'users', undefined, { preview: true })
+    useEditorStore.getState().openTableTab('c1', 'public', 'orders', undefined, { preview: false })
+    const state = useEditorStore.getState()
+    expect(state.tabs).toHaveLength(3)
+  })
+
+  it('promotes an existing preview tab when the same table is opened permanently', () => {
+    useEditorStore.getState().openTableTab('c1', 'public', 'users', undefined, { preview: true })
+    useEditorStore.getState().openTableTab('c1', 'public', 'users', undefined, { preview: false })
+    const state = useEditorStore.getState()
+    expect(state.tabs).toHaveLength(2)
+    const tab = state.tabs[1]
+    expect(tab.kind === 'table' && tab.preview).toBe(false)
+  })
+
+  it('promoteTab pins a preview tab so the next preview no longer replaces it', () => {
+    useEditorStore.getState().openTableTab('c1', 'public', 'users', undefined, { preview: true })
+    const pinnedId = useEditorStore.getState().tabs[1].id
+    useEditorStore.getState().promoteTab(pinnedId)
+    useEditorStore.getState().openTableTab('c1', 'public', 'orders', undefined, { preview: true })
+    const state = useEditorStore.getState()
+    expect(state.tabs).toHaveLength(3)
+    expect(state.tabs.some((t) => t.id === pinnedId)).toBe(true)
+  })
+})
+
 describe('editorStore — openOverviewTab', () => {
   it('appends an Overview tab the first time it is opened', () => {
     useEditorStore.getState().openOverviewTab('c1', 'public')

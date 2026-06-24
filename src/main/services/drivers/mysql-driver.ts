@@ -1,20 +1,10 @@
 import mysql from 'mysql2/promise'
-import type {
-  FieldPacket,
-  Pool,
-  PoolOptions,
-  ResultSetHeader,
-  RowDataPacket
-} from 'mysql2/promise'
+import type { FieldPacket, Pool, PoolOptions, ResultSetHeader, RowDataPacket } from 'mysql2/promise'
 import { MAX_RESULT_ROWS } from '@shared/types/query'
 import type { BatchStatement, ExecuteBatchResult, QueryResultSet } from '@shared/types/query'
 import type { ConnectionTestResult, SslMode } from '@shared/types/connection'
 import type { SchemaSnapshot } from '@shared/types/schema'
-import type {
-  TableChangeSet,
-  TableDataPage,
-  TableMutateResult
-} from '@shared/types/table-data'
+import type { TableChangeSet, TableDataPage, TableMutateResult } from '@shared/types/table-data'
 import { quoteMysqlIdent } from '@main/utils/sql'
 import { introspectMysql } from '@main/services/drivers/mysql-introspection'
 import {
@@ -34,6 +24,10 @@ import type {
 const POOL_DEFAULTS = {
   connectionLimit: 5,
   connectTimeout: 10_000,
+  // TCP keep-alive so a remote server / NAT doesn't silently drop an idle
+  // connection between queries (server wait_timeout still applies on its side).
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10_000,
   // Return dates and big integers as strings — safe to serialise over IPC and
   // keeps precision for BIGINT / DECIMAL columns.
   dateStrings: true,
@@ -52,7 +46,9 @@ function toPoolOptions(params: DriverConnectionParams): PoolOptions {
     port: params.port,
     user: params.username,
     password: params.password,
-    database: params.database,
+    // Blank database = connect to the server with no database selected; the
+    // user picks one afterwards (mysql2 treats undefined as "none").
+    database: params.database || undefined,
     ssl: toSsl(params.ssl),
     ...POOL_DEFAULTS
   }
@@ -123,7 +119,7 @@ export class MysqlDriver implements DatabaseDriver {
       port: params.port,
       user: params.username,
       password: params.password,
-      database: params.database,
+      database: params.database || undefined,
       ssl: toSsl(params.ssl),
       connectTimeout: 10_000
     })
@@ -272,11 +268,7 @@ export class MysqlDriver implements DatabaseDriver {
   }
 
   /** Returns the `CREATE TABLE`/`CREATE VIEW` DDL via `SHOW CREATE TABLE`. */
-  async scriptCreateTable(
-    connectionId: string,
-    schema: string,
-    table: string
-  ): Promise<string> {
+  async scriptCreateTable(connectionId: string, schema: string, table: string): Promise<string> {
     const pool = this.requirePool(connectionId)
     const qualified = `${quoteMysqlIdent(schema)}.${quoteMysqlIdent(table)}`
     const [rows] = await pool.query<RowDataPacket[]>(`SHOW CREATE TABLE ${qualified}`)

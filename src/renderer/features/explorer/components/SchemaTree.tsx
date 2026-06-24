@@ -116,18 +116,27 @@ function TreeRow({ node, depth, forceExpand, onContextMenu }: TreeRowProps): Rea
     (forceExpand && node.kind === 'schema') || node.id === PINNED_GROUP_ID || storeExpanded
   const Icon = NODE_ICON[node.kind]
 
-  const openTable = (): void => {
+  const openTable = (preview: boolean): void => {
     if (!node.openTable) return
     const connectionId = useConnectionStore.getState().activeConnectionId
     if (connectionId) {
-      openTableTab(connectionId, node.openTable.schema, node.openTable.table)
+      openTableTab(connectionId, node.openTable.schema, node.openTable.table, undefined, {
+        preview
+      })
     }
   }
 
-  // Row click opens a table directly; container nodes toggle instead.
+  // Row click opens a table in the shared preview tab (VS Code style);
+  // container nodes toggle instead.
   const handleRowClick = (): void => {
-    if (node.openTable) openTable()
+    if (node.openTable) openTable(true)
     else if (hasChildren) toggleNode(node.id)
+  }
+
+  // Double-click promotes the table to a permanent tab so it survives the
+  // next single click elsewhere.
+  const handleRowDoubleClick = (): void => {
+    if (node.openTable) openTable(false)
   }
 
   // The chevron always toggles expansion — that is how table columns are revealed.
@@ -142,6 +151,7 @@ function TreeRow({ node, depth, forceExpand, onContextMenu }: TreeRowProps): Rea
         role="treeitem"
         aria-expanded={hasChildren ? expanded : undefined}
         onClick={handleRowClick}
+        onDoubleClick={handleRowDoubleClick}
         onContextMenu={(event) => onContextMenu(node, event)}
         style={{ paddingLeft: depth * 12 + 6 }}
         title={node.detail ? `${node.label} — ${node.detail}` : node.label}

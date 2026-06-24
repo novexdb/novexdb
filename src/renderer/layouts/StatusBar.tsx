@@ -5,9 +5,7 @@ import { ENGINE_LABELS } from '@renderer/features/connections/constants'
 /** Slim bottom strip summarising the active connection. */
 export function StatusBar(): ReactNode {
   const activeId = useConnectionStore((s) => s.activeConnectionId)
-  const active = useConnectionStore(
-    (s) => s.connections.find((c) => c.id === activeId) ?? null
-  )
+  const active = useConnectionStore((s) => s.connections.find((c) => c.id === activeId) ?? null)
 
   return (
     <footer className="flex h-6 shrink-0 items-center justify-between border-t border-line bg-surface px-3 text-[11px] text-subtle">
@@ -18,8 +16,12 @@ export function StatusBar(): ReactNode {
             <span className="text-muted">
               {active.username}@{active.host}:{active.port}
             </span>
-            <span>·</span>
-            <span>{active.database}</span>
+            {active.database && (
+              <>
+                <span>·</span>
+                <span>{active.database}</span>
+              </>
+            )}
           </>
         ) : (
           <span>Not connected</span>

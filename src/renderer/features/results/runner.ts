@@ -2,6 +2,7 @@ import { ipc } from '@renderer/services/ipc'
 import { useConnectionStore } from '@renderer/features/connections/stores/connectionStore'
 import { useEditorStore } from '@renderer/features/editor/stores/editorStore'
 import { activeEditor } from '@renderer/features/editor/monaco/activeEditor'
+import { statementAtOffset } from '@renderer/features/editor/utils/statements'
 import { useResultStore } from '@renderer/features/results/stores/resultStore'
 import { useHistoryStore } from '@renderer/features/results/stores/historyStore'
 import { useUiStore } from '@renderer/stores/uiStore'
@@ -37,26 +38,34 @@ export async function runSql(sql: string): Promise<void> {
   void useHistoryStore.getState().load()
 }
 
-/** Run the editor's current selection, or the whole active tab when nothing is selected. */
+/**
+ * Run what the user means: the current selection if there is one, otherwise the
+ * single statement under the cursor. Falls back to the whole active tab only
+ * when the live editor isn't available (e.g. it hasn't mounted yet).
+ */
 export function runActiveQuery(): void {
-  let sql = ''
-
   const editor = activeEditor.get()
-  if (editor) {
+  const model = editor?.getModel()
+
+  if (editor && model) {
     const selection = editor.getSelection()
-    const model = editor.getModel()
-    if (selection && model && !selection.isEmpty()) {
-      sql = model.getValueInRange(selection)
+    if (selection && !selection.isEmpty()) {
+      void runSql(model.getValueInRange(selection))
+      return
+    }
+    const position = editor.getPosition()
+    if (position) {
+      const statement = statementAtOffset(model.getValue(), model.getOffsetAt(position))
+      if (statement) {
+        void runSql(statement)
+        return
+      }
     }
   }
 
-  if (!sql.trim()) {
-    const { tabs, activeTabId } = useEditorStore.getState()
-    const tab = tabs.find((t) => t.id === activeTabId)
-    sql = tab?.kind === 'query' ? tab.sql : ''
-  }
-
-  void runSql(sql)
+  const { tabs, activeTabId } = useEditorStore.getState()
+  const tab = tabs.find((t) => t.id === activeTabId)
+  void runSql(tab?.kind === 'query' ? tab.sql : '')
 }
 
 /** Request cancellation of the query currently running. */
